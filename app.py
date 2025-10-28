@@ -295,7 +295,7 @@ with st.sidebar.form("booking_form"):
     city = st.text_input("City")
     date = st.date_input("Preferred date", min_value=datetime.today())
     time = st.time_input("Preferred time")
-    reason = st.text_area("Reason", value=str(patient.get("concern") or "Skin consultation"))
+    reason = st.text_area("Reason", value="Skin consultation")
     submitted = st.form_submit_button("Book appointment")
     if submitted:
         c.execute('INSERT INTO bookings (name,email,city,date,time,reason,created_at) VALUES (?,?,?,?,?,?,?)',
