@@ -21,7 +21,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# ---------- Styles (soft blush-pink + bounce + glow) ----------
+# ---------- Styles (soft blush-pink + glassmorphism + tilt) ----------
 st.markdown(
     """
     <style>
@@ -36,6 +36,15 @@ st.markdown(
         background: radial-gradient(circle at top left, #fff7f4 0, #fceee8 30%, #f7e4dd 60%, #f1dbd2 100%);
     }
 
+    /* Page fade-in */
+    .page-container {
+        animation: fadeInUp 0.35s ease-out;
+    }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
     .hero-title {
         font-size: 40px;
         font-weight: 700;
@@ -47,8 +56,8 @@ st.markdown(
     .hero-sub {
         text-align: center;
         color: #7b5b54;
-        font-size: 14px;
-        letter-spacing: 0.15em;
+        font-size: 13px;
+        letter-spacing: 0.18em;
         text-transform: uppercase;
     }
 
@@ -57,44 +66,51 @@ st.markdown(
         margin: 2rem auto 1rem auto;
     }
 
-    .feature-card {
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 22px;
-        padding: 18px 20px;
-        text-align: left;
-        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.9);
-        transition: all 0.18s ease-out;
-        cursor: pointer;
-        position: relative;
-        overflow: hidden;
+    /* Glassmorphism card buttons */
+    .feature-card-wrapper button {
+        width: 100% !important;
+        text-align: left !important;
+        background: linear-gradient(135deg, rgba(255,255,255,0.82), rgba(255,250,248,0.96));
+        border-radius: 22px !important;
+        padding: 18px 20px !important;
+        border: 1px solid rgba(255,255,255,0.9) !important;
+        box-shadow: 0 16px 40px rgba(0,0,0,0.08);
+        color: #3d2623 !important;
+        font-weight: 500;
+        font-size: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        transition: transform 0.18s ease-out, box-shadow 0.18s ease-out, border-color 0.18s ease-out;
+        white-space: normal !important;
     }
-    .feature-card:hover {
-        transform: translateY(-4px) scale(1.01);
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+    .feature-card-wrapper button:hover {
+        transform: translateY(-4px) scale(1.01) rotate3d(1, -1, 0, 2deg);
+        box-shadow: 0 24px 55px rgba(0,0,0,0.16);
+        border-color: #f3c7b5 !important;
     }
-    .feature-emoji {
-        font-size: 32px;
-        margin-bottom: 4px;
-    }
-    .feature-title {
-        font-size: 17px;
+    .feature-title-line {
+        font-size: 16px;
         font-weight: 600;
-        color: #3d2623;
-        margin-bottom: 4px;
     }
-    .feature-text {
-        font-size: 13px;
-        color: #7d615a;
+    .feature-subtitle {
+        font-size: 12px;
+        color: #825e58;
+    }
+    .feature-emoji-span {
+        font-size: 22px;
+        margin-right: 8px;
     }
 
     .chat-card {
-        background: #ffffff;
+        background: rgba(255,255,255,0.96);
         border-radius: 18px;
         padding: 18px 22px;
         box-shadow: 0 12px 30px rgba(0,0,0,0.07);
         max-width: 780px;
         margin: 1.5rem auto;
+        backdrop-filter: blur(18px);
+        border: 1px solid rgba(255,255,255,0.9);
     }
     .derm-bubble {
         background: #ffffff;
@@ -111,27 +127,17 @@ st.markdown(
         margin-left: 40px;
     }
 
-    .pill {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 999px;
-        background: rgba(129, 97, 82, 0.10);
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.14em;
-        color: #7a5b4a;
-    }
-
-    .metric-card {
-        background: rgba(255,255,255,0.96);
-        border-radius: 16px;
-        padding: 14px 18px;
-        box-shadow: 0 10px 24px rgba(0,0,0,0.06);
-    }
-
     .back-button-container {
         max-width: 780px;
         margin: 0.5rem auto 0 auto;
+    }
+    .back-button-container button {
+        background: rgba(255,255,255,0.85) !important;
+        border-radius: 999px !important;
+        border: 1px solid rgba(255,255,255,0.9) !important;
+        font-size: 13px;
+        color: #7a5851 !important;
+        padding: 4px 14px !important;
     }
     </style>
     """,
@@ -199,24 +205,6 @@ def detect_severe_keywords(text: str) -> bool:
     t = (text or "").lower()
     return any(word in t for word in severe)
 
-# ---------- Simple CSV-backed product/facepack data (for LLM context if needed) ----------
-PRODUCT_CSV = "data/products.csv"
-FACEPACK_CSV = "data/facepacks.csv"
-
-try:
-    products_df = pd.read_csv(PRODUCT_CSV)
-except Exception:
-    products_df = pd.DataFrame(
-        columns=["name", "suitable_for", "price_range", "tags", "link", "notes"]
-    )
-
-try:
-    facepacks_df = pd.read_csv(FACEPACK_CSV)
-except Exception:
-    facepacks_df = pd.DataFrame(
-        columns=["name", "suitable_for", "am_pm", "frequency", "ingredients", "notes"]
-    )
-
 # ---------- OpenRouter real-time chat ----------
 SYSTEM_PROMPT = """
 You are SkinSync, a friendly but responsible AI dermatology assistant.
@@ -231,10 +219,6 @@ Your goals:
 """
 
 def call_openrouter_chat(messages):
-    """
-    messages: list of dicts with role and content, in OpenAI format
-    returns assistant reply text or error message
-    """
     if not OPENROUTER_API_KEY:
         return None, "No OpenRouter API key found. Add OPENROUTER_API_KEY in your .env."
 
@@ -242,12 +226,11 @@ def call_openrouter_chat(messages):
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
-        # Optional but nice to have:
         "HTTP-Referer": "https://skinsync.streamlit.app",
         "X-Title": "SkinSync AI Dermatologist",
     }
     payload = {
-        "model": "openai/gpt-4o-mini",  # via OpenRouter
+        "model": "openai/gpt-4o-mini",
         "messages": messages,
         "temperature": 0.65,
     }
@@ -263,17 +246,14 @@ def call_openrouter_chat(messages):
 
 # ---------- Simple “ML-like” Acne/Redness Analysis ----------
 def analyze_skin_image(image: Image.Image):
-    # Convert to numpy
     img = image.convert("RGB")
     arr = np.array(img).astype("float32")
 
-    # Compute redness index: R - (G+B)/2
     r = arr[:, :, 0]
     g = arr[:, :, 1]
     b = arr[:, :, 2]
     redness = r - (g + b) / 2
 
-    # Normalize
     redness_normalized = (redness - redness.min()) / (redness.ptp() + 1e-6)
     mean_red = float(redness_normalized.mean())
 
@@ -291,105 +271,74 @@ def analyze_skin_image(image: Image.Image):
 # ---------- Layout helpers ----------
 def render_back_to_home():
     with st.container():
-        st.markdown('<div class="back-button-container">', unsafe_allow_html=True)
+        st.markdown('<div class="back-button-container page-container">', unsafe_allow_html=True)
         if st.button("← Back to Home"):
             set_page("home")
         st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------- Pages ----------
 def render_home():
+    st.markdown('<div class="page-container">', unsafe_allow_html=True)
+
     st.markdown('<div class="hero-sub">AI · SKINCARE · DERMATOLOGY</div>', unsafe_allow_html=True)
     st.markdown('<div class="hero-title">SkinSync</div>', unsafe_allow_html=True)
     st.markdown(
-        "<p style='text-align:center;color:#815952;font-size:14px;'>Your AI-powered skincare companion for gentle, science-based routines.</p>",
+        "<p style='text-align:center;color:#815952;font-size:15px;margin-top:-5px;'>"
+        "Your AI-powered skincare companion for gentle, science-based routines."
+        "</p>",
         unsafe_allow_html=True,
     )
 
     st.markdown("<br/>", unsafe_allow_html=True)
 
-    with st.container():
-        st.markdown('<div class="feature-grid">', unsafe_allow_html=True)
-        col1, col2 = st.columns(2)
+    st.markdown('<div class="feature-grid">', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
 
-        with col1:
-            if st.button("🩺  AI Derm Chat", key="feat_chat_btn"):
-                set_page("chat")
-            st.markdown(
-                """
-                <div class="feature-card">
-                  <div class="feature-emoji">🩺</div>
-                  <div class="feature-title">AI Dermatologist Chat</div>
-                  <div class="feature-text">Describe your skin in your own words and get a personalised routine, like chatting with a friendly derm.</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-        with col2:
-            if st.button("📷  Skin Analysis", key="feat_scan_btn"):
-                set_page("scan")
-            st.markdown(
-                """
-                <div class="feature-card">
-                  <div class="feature-emoji">📷</div>
-                  <div class="feature-title">Skin Image Analysis</div>
-                  <div class="feature-text">Upload a face photo to estimate redness and get gentle-care tips for acne and irritation.</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-        col3, col4 = st.columns(2)
-
-        with col3:
-            if st.button("📅  Appointments", key="feat_appt_btn"):
-                set_page("appointments")
-            st.markdown(
-                """
-                <div class="feature-card">
-                  <div class="feature-emoji">📅</div>
-                  <div class="feature-title">Appointments</div>
-                  <div class="feature-text">Book a consultation slot that can later be wired to a real clinic backend or admin.</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-        with col4:
-            if st.button("📋  Consult History", key="feat_history_btn"):
-                set_page("history")
-            st.markdown(
-                """
-                <div class="feature-card">
-                  <div class="feature-emoji">📋</div>
-                  <div class="feature-title">Consult History</div>
-                  <div class="feature-text">View saved consults, including your last generated routine and key notes.</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
+    # Card 1 - Chat
+    with col1:
+        st.markdown('<div class="feature-card-wrapper">', unsafe_allow_html=True)
+        if st.button("🩺  AI Dermatologist Chat\n\nDescribe your skin and get a personalised, gentle AM/PM routine.",
+                     key="card_chat"):
+            set_page("chat")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.subheader("For your resume / portfolio")
-    st.markdown(
-        """
-- Real-time AI dermatologist chat using OpenRouter (LLM-driven).  
-- Full-stack Streamlit app with SQLite for bookings & consult history.  
-- Skin image analysis module using basic computer vision heuristics (redness index).  
-- Clearly separated modules: chat, analysis, bookings, history, with a modern home dashboard UI.  
-        """
-    )
+    # Card 2 - Scan
+    with col2:
+        st.markdown('<div class="feature-card-wrapper">', unsafe_allow_html=True)
+        if st.button("📷  Skin Analysis\n\nUpload a face photo to estimate redness and get gentle-care tips.",
+                     key="card_scan"):
+            set_page("scan")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    col3, col4 = st.columns(2)
+
+    # Card 3 - Appointments
+    with col3:
+        st.markdown('<div class="feature-card-wrapper">', unsafe_allow_html=True)
+        if st.button("📅  Appointments\n\nBook consultation slots that can later link to a real clinic backend.",
+                     key="card_appt"):
+            set_page("appointments")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # Card 4 - History
+    with col4:
+        st.markdown('<div class="feature-card-wrapper">', unsafe_allow_html=True)
+        if st.button("📋  Consult History\n\nSee your saved consults and generated routines.",
+                     key="card_history"):
+            set_page("history")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 def render_chat():
     render_back_to_home()
-    st.markdown("### 🩺 AI Derm Chat")
+    st.markdown('<div class="page-container">', unsafe_allow_html=True)
+    st.markdown("### 🩺 AI Derm Chat", unsafe_allow_html=True)
 
     with st.container():
         st.markdown('<div class="chat-card">', unsafe_allow_html=True)
 
-        # initial greeting
         if not st.session_state.messages:
             append_message(
                 "assistant",
@@ -398,7 +347,6 @@ def render_chat():
                 "and what products you use. I’ll help you build a gentle AM/PM routine."
             )
 
-        # show messages
         for m in st.session_state.messages:
             if m["role"] == "assistant":
                 st.markdown(
@@ -422,17 +370,12 @@ def render_chat():
             if not user_input.strip():
                 st.warning("Please type something 💗")
             else:
-                # user message
                 append_message("user", user_input)
 
-                # build messages for OpenRouter
                 or_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
                 for m in st.session_state.messages:
-                    or_messages.append(
-                        {"role": m["role"], "content": m["text"]}
-                    )
+                    or_messages.append({"role": m["role"], "content": m["text"]})
 
-                # Red flag (local) warning if needed
                 if detect_severe_keywords(user_input):
                     warn = (
                         "I noticed words like pain, pus, fever or rapid spreading. "
@@ -443,18 +386,17 @@ def render_chat():
 
                 reply_text, err = call_openrouter_chat(or_messages)
                 if err:
-                    # fallback simple response
                     fallback = (
-                        "I couldn't contact the AI engine just now, but based on what you said "
+                        "I couldn't contact the AI engine right now, but based on what you said "
                         "I suggest keeping your routine simple: gentle cleanser, moisturizer and sunscreen. "
-                        "Introduce actives slowly and patch test first."
+                        "Introduce actives slowly and always patch test first."
                     )
                     append_message("assistant", fallback)
                     st.session_state.last_plan = fallback
                     st.error(err)
                 else:
                     append_message("assistant", reply_text)
-                    st.session_state.last_plan = reply_text  # so Save consult stores latest plan
+                    st.session_state.last_plan = reply_text
 
         if save_clicked:
             if st.session_state.last_plan is None:
@@ -476,9 +418,11 @@ def render_chat():
                 st.success("Consult saved to history ✅")
 
         st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 def render_scan():
     render_back_to_home()
+    st.markdown('<div class="page-container">', unsafe_allow_html=True)
     st.markdown("### 📷 Skin Image Analysis")
 
     col1, col2 = st.columns([1.2, 1])
@@ -511,12 +455,14 @@ def render_scan():
 - Converts the image to RGB, then computes a **redness index** per pixel.  
 - Normalises the value to a 0–1 range and takes the mean.  
 - Maps the mean redness value to **mild / moderate / high** categories.  
-- This shows you understand: image preprocessing, colour channels, basic CV feature engineering.  
+- Shows you understand image preprocessing, colour channels and basic CV feature engineering.  
             """
         )
+    st.markdown("</div>", unsafe_allow_html=True)
 
 def render_history():
     render_back_to_home()
+    st.markdown('<div class="page-container">', unsafe_allow_html=True)
     st.markdown("### 📋 Consult History")
 
     df = pd.read_sql_query(
@@ -525,13 +471,13 @@ def render_history():
     )
     if df.empty:
         st.info("No consults saved yet. After a chat, click 'Save consult' to store one.")
+        st.markdown("</div>", unsafe_allow_html=True)
         return
 
     def preview(row):
         try:
             data = json.loads(row["data"])
             convo = data.get("conversation", [])
-            # grab first user message and maybe last_plan
             first_user = next((m["text"] for m in convo if m["role"] == "user"), "")
             last_plan = data.get("last_plan", "")
             return f"User: {first_user[:40]}... | Plan: {last_plan[:40]}..."
@@ -540,9 +486,11 @@ def render_history():
 
     df["summary"] = df.apply(preview, axis=1)
     st.dataframe(df[["id", "summary", "created_at"]], use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 def render_appointments():
     render_back_to_home()
+    st.markdown('<div class="page-container">', unsafe_allow_html=True)
     st.markdown("### 📅 Appointments")
 
     with st.form("booking_form_main"):
@@ -584,6 +532,7 @@ def render_appointments():
         st.info("No appointment requests yet.")
     else:
         st.dataframe(df, use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------- Routing ----------
 page = st.session_state.page
