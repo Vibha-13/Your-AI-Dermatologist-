@@ -259,21 +259,75 @@ def append_message(role: str, text: str):
     st.session_state.messages.append({"role": role, "text": text})
 
 # ========= ANIMATED SPLASH (runs once, no rerun loop) ==========
+
 def render_animated_splash():
     st.markdown(
         """
-        <div class="animated-splash">
+        <style>
+        .animated-splash {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(180deg, #f9f7f6 0%, #f4efed 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            animation: splashFadeOut 0.9s ease-out forwards;
+            animation-delay: 1.45s;
+        }
+
+        .splash-text {
+            font-family: 'Playfair Display', serif;
+            font-size: 64px;
+            letter-spacing: 0.18em;
+            color: #2d2220;
+            position: relative;
+            opacity: 0;
+            animation: splashFadeIn 1.1s ease-out forwards,
+                       splashSlideUp 1.1s ease-out forwards;
+        }
+
+        .splash-text::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -150%;
+            width: 60%;
+            height: 100%;
+            background: linear-gradient(120deg,
+                transparent,
+                rgba(255,255,255,0.8),
+                transparent);
+            animation: shineAnim 1.3s ease-out forwards;
+            animation-delay: 0.3s;
+        }
+
+        @keyframes splashFadeIn { from {opacity:0;} to {opacity:1;} }
+        @keyframes splashSlideUp { from {transform:translateY(26px);} to {transform:translateY(0);} }
+        @keyframes shineAnim { from {left:-150%;} to {left:150%;} }
+        @keyframes splashFadeOut { to {opacity:0; visibility:hidden;} }
+        </style>
+
+        <div id="splash" class="animated-splash">
             <div class="splash-text">SKINSYNC</div>
         </div>
+
+        <script>
+        // Remove after animation completes
+        setTimeout(function() {
+            var splash = document.getElementById("splash");
+            if (splash) splash.remove();
+        }, 1600);
+        </script>
         """,
         unsafe_allow_html=True,
     )
-    # let animation play
-    time.sleep(2.1)
 
-if not st.session_state.splash_done:
+    time.sleep(1.7)
+
+if not st.session_state.get("splash_done", False):
     render_animated_splash()
-    st.session_state.splash_done = True
+    st.session_state["splash_done"] = True
     st.stop()
 
 # ========= SYNC PAGE FROM URL (for ?page=chat etc.) ==========
