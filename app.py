@@ -22,7 +22,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# ========= CLEAN GIRL AESTHETIC CSS ==========
+# ========= GLOBAL CSS (clean girl aesthetic + splash) ==========
 st.markdown(
     """
 <style>
@@ -37,8 +37,8 @@ html, body, [class*="css"] {
     background: linear-gradient(180deg, #fffefd 0%, #f6f3f2 40%, #efeceb 100%);
 }
 
-/* Splash Screen */
-.splash-wrapper {
+/* Animated Splash Screen */
+.animated-splash {
     position: fixed;
     inset: 0;
     background: linear-gradient(180deg, #f9f7f6 0%, #f4efed 100%);
@@ -47,32 +47,40 @@ html, body, [class*="css"] {
     justify-content: center;
     z-index: 99999;
 }
-.splash-title {
+.splash-text {
     font-family: 'Playfair Display', serif;
-    font-size: 52px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #272020;
+    font-size: 64px;
+    letter-spacing: 0.18em;
+    color: #2d2220;
     position: relative;
+    opacity: 0;
+    animation: splashFadeIn 1.2s ease-out forwards,
+               splashSlideUp 1.2s ease-out forwards;
 }
-.splash-title::after {
+.splash-text::after {
     content: "";
     position: absolute;
     top: 0;
-    left: -60%;
-    width: 40%;
+    left: -150%;
+    width: 60%;
     height: 100%;
-    background: linear-gradient(
-        105deg,
-        transparent,
-        rgba(255,255,255,0.7),
-        transparent
-    );
-    animation: shine 1.1s ease-out forwards;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.7), transparent);
+    animation: splashShine 1.4s ease-out forwards;
+    animation-delay: 0.3s;
 }
-@keyframes shine {
-    0% { left: -60%; }
-    100% { left: 160%; }
+
+@keyframes splashFadeIn {
+    0% { opacity: 0; }
+    40% { opacity: 1; }
+    100% { opacity: 1; }
+}
+@keyframes splashSlideUp {
+    0% { transform: translateY(26px); }
+    100% { transform: translateY(0); }
+}
+@keyframes splashShine {
+    0% { left: -150%; }
+    100% { left: 150%; }
 }
 
 /* Page fade-in */
@@ -106,7 +114,7 @@ html, body, [class*="css"] {
     margin-top: 2px;
 }
 
-/* Feature grid & clean girl cards */
+/* Feature grid & cards */
 .feature-grid {
     max-width: 900px;
     margin: 2rem auto 1rem auto;
@@ -116,7 +124,7 @@ html, body, [class*="css"] {
     color: inherit;
 }
 .premium-card {
-    background: rgba(255,255,255,0.82);
+    background: rgba(255,255,255,0.86);
     border-radius: 22px;
     padding: 20px 22px;
     border: 1px solid rgba(238,233,230,0.95);
@@ -250,24 +258,25 @@ def detect_severe_keywords(text: str) -> bool:
 def append_message(role: str, text: str):
     st.session_state.messages.append({"role": role, "text": text})
 
-# ========= SPLASH (SAFE) ==========
-def render_splash():
+# ========= ANIMATED SPLASH (runs once, no rerun loop) ==========
+def render_animated_splash():
     st.markdown(
         """
-        <div class="splash-wrapper">
-            <div class="splash-title">SkinSync</div>
+        <div class="animated-splash">
+            <div class="splash-text">SKINSYNC</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    time.sleep(1.5)
+    # let animation play
+    time.sleep(2.1)
 
 if not st.session_state.splash_done:
-    render_splash()
+    render_animated_splash()
     st.session_state.splash_done = True
     st.stop()
 
-# ========= SYNC PAGE FROM URL (for ?page=...) ==========
+# ========= SYNC PAGE FROM URL (for ?page=chat etc.) ==========
 qs = st.experimental_get_query_params()
 if "page" in qs:
     st.session_state.page = qs["page"][0]
@@ -355,7 +364,6 @@ def render_home():
     st.markdown('<div class="feature-grid">', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
 
-    # row 1
     with col1:
         st.markdown(
             """
@@ -366,7 +374,7 @@ def render_home():
                   <span>AI Dermatologist Chat</span>
                 </div>
                 <div class="card-subtitle">
-                  Talk about your skin like you would with a friend and get a simple, gentle routine.
+                  Talk about your skin like with a friend and get a simple, gentle routine.
                 </div>
               </div>
             </a>
@@ -384,7 +392,7 @@ def render_home():
                   <span>Skin Image Analysis</span>
                 </div>
                 <div class="card-subtitle">
-                  Estimate redness/inflammation levels from a photo and get care tips.
+                  Estimate redness/inflammation from a photo and get care tips.
                 </div>
               </div>
             </a>
@@ -478,7 +486,6 @@ def render_chat():
                 for m in st.session_state.messages:
                     msgs.append({"role": m["role"], "content": m["text"]})
 
-                # Local safety nudge
                 if detect_severe_keywords(user_input):
                     warn = (
                         "I see words like pain, pus, fever or spreading. "
@@ -494,7 +501,7 @@ def render_chat():
                         "- Gentle, non-stripping cleanser\n"
                         "- Simple moisturizer suited to your skin type\n"
                         "- Broad-spectrum sunscreen in the morning\n\n"
-                        "Introduce any active (like niacinamide, salicylic acid, retinol) slowly and patch-test first."
+                        "Introduce any active (niacinamide, salicylic acid, retinol) slowly and patch-test first."
                     )
                     append_message("assistant", fallback)
                     st.session_state.last_plan = fallback
@@ -544,7 +551,7 @@ def render_scan():
                 st.write(f"**Redness score (0–1):** `{mean_red:.2f}`")
                 st.write(f"**Severity:** {severity}")
                 st.info(
-                    "This is a simple educational tool based on color values, not a diagnosis. "
+                    "This is a simple educational tool based on colour values, not a diagnosis. "
                     "For anything worrying, always see a real dermatologist."
                 )
         else:
@@ -593,14 +600,14 @@ def render_history():
 def render_appointments():
     render_back_to_home()
     st.markdown('<div class="page-container">', unsafe_allow_html=True)
-    st.markmarkdown("### 📅 Appointments")
+    st.markdown("### 📅 Appointments")
 
     with st.form("booking_form_main"):
         name = st.text_input("Full name")
         email = st.text_input("Email")
         city = st.text_input("City")
         date = st.date_input("Preferred date", min_value=datetime.today())
-        time_input = st.time_input("Preferred time")
+        preferred_time = st.time_input("Preferred time")
         reason = st.text_area("Reason for visit", value="Skin consultation")
         submitted = st.form_submit_button("Book appointment")
         if submitted:
@@ -614,7 +621,7 @@ def render_appointments():
                     email,
                     city,
                     str(date),
-                    str(time_input),
+                    str(preferred_time),
                     reason,
                     datetime.utcnow().isoformat(),
                 ),
