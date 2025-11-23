@@ -1,4 +1,6 @@
 streamlit
 pandas
-openai
 python-dotenv
+pillow
+numpy
+requests
