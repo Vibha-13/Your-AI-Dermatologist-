@@ -9,6 +9,7 @@ from io import BytesIO
 from PIL import Image
 import numpy as np
 import requests
+import time
 
 # ---------- Env & API Key ----------
 load_dotenv()
@@ -21,7 +22,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# ---------- Styles (soft blush-pink + glassmorphism + tilt) ----------
+# ---------- Global Styles ----------
 st.markdown(
     """
     <style>
@@ -36,6 +37,62 @@ st.markdown(
         background: radial-gradient(circle at top left, #fff7f4 0, #fceee8 30%, #f7e4dd 60%, #f1dbd2 100%);
     }
 
+    /* Splash screen */
+    .splash-wrapper {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at top left, #ffeae1 0, #f7d4c7 40%, #eebfb0 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        animation: splashFade 1.4s ease-out forwards;
+    }
+    .splash-inner {
+        text-align: center;
+    }
+    .splash-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 52px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: #2f1713;
+        position: relative;
+        display: inline-block;
+        padding: 0 10px;
+        overflow: hidden;
+    }
+    .splash-title::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -50%;
+        width: 50%;
+        height: 100%;
+        background: linear-gradient(120deg, transparent, rgba(255,255,255,0.8), transparent);
+        transform: skewX(-20deg);
+        animation: shine 1.1s ease-out forwards;
+        animation-delay: 0.1s;
+    }
+    .splash-sub {
+        margin-top: 0.75rem;
+        font-size: 13px;
+        letter-spacing: 0.26em;
+        text-transform: uppercase;
+        color: #5e3a35;
+    }
+
+    @keyframes shine {
+        0% { left: -60%; }
+        100% { left: 130%; }
+    }
+    @keyframes splashFade {
+        0% { opacity: 1; }
+        100% { opacity: 0; }
+    }
+
     /* Page fade-in */
     .page-container {
         animation: fadeInUp 0.35s ease-out;
@@ -45,6 +102,7 @@ st.markdown(
         to   { opacity: 1; transform: translateY(0); }
     }
 
+    /* Hero */
     .hero-title {
         font-size: 40px;
         font-weight: 700;
@@ -61,45 +119,59 @@ st.markdown(
         text-transform: uppercase;
     }
 
+    /* Feature grid & glossy cards */
     .feature-grid {
         max-width: 900px;
         margin: 2rem auto 1rem auto;
     }
-
-    /* Glassmorphism card buttons */
-    .feature-card-wrapper button {
-        width: 100% !important;
-        text-align: left !important;
-        background: linear-gradient(135deg, rgba(255,255,255,0.82), rgba(255,250,248,0.96));
-        border-radius: 22px !important;
-        padding: 18px 20px !important;
-        border: 1px solid rgba(255,255,255,0.9) !important;
-        box-shadow: 0 16px 40px rgba(0,0,0,0.08);
-        color: #3d2623 !important;
-        font-weight: 500;
-        font-size: 15px;
+    .card-link {
+        text-decoration: none;
+        color: inherit;
+    }
+    .premium-card {
+        background: linear-gradient(
+            135deg,
+            rgba(255,255,255,0.82),
+            rgba(255,246,241,0.98)
+        );
+        border-radius: 22px;
+        padding: 18px 22px;
+        border: 1px solid rgba(255,255,255,0.92);
+        box-shadow: 0 18px 46px rgba(0,0,0,0.10);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        transition: transform 0.18s ease-out,
+                    box-shadow 0.18s ease-out,
+                    border-color 0.18s ease-out,
+                    background 0.18s ease-out;
         display: flex;
         flex-direction: column;
         gap: 4px;
-        transition: transform 0.18s ease-out, box-shadow 0.18s ease-out, border-color 0.18s ease-out;
-        white-space: normal !important;
     }
-    .feature-card-wrapper button:hover {
-        transform: translateY(-4px) scale(1.01) rotate3d(1, -1, 0, 2deg);
-        box-shadow: 0 24px 55px rgba(0,0,0,0.16);
-        border-color: #f3c7b5 !important;
+    .premium-card:hover {
+        transform: translateY(-6px) scale(1.01) rotate3d(1,-1,0,2deg);
+        box-shadow: 0 26px 60px rgba(0,0,0,0.22);
+        border-color: #f0bba7;
+        background: linear-gradient(
+            145deg,
+            rgba(255,255,255,0.94),
+            rgba(255,242,236,0.98)
+        );
     }
-    .feature-title-line {
+    .card-header-line {
         font-size: 16px;
         font-weight: 600;
+        color: #3b2220;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
-    .feature-subtitle {
-        font-size: 12px;
-        color: #825e58;
+    .card-emoji {
+        font-size: 20px;
     }
-    .feature-emoji-span {
-        font-size: 22px;
-        margin-right: 8px;
+    .card-subtitle {
+        font-size: 13px;
+        color: #84615a;
     }
 
     .chat-card {
@@ -177,20 +249,25 @@ if "session_id" not in st.session_state:
     st.session_state.session_id = datetime.utcnow().isoformat()
 
 if "messages" not in st.session_state:
-    st.session_state.messages = []  # list of {"role": "user"/"assistant", "text": str}
+    st.session_state.messages = []
 
+if "last_plan" not in st.session_state:
+    st.session_state.last_plan = None
+
+if "splash_done" not in st.session_state:
+    st.session_state.splash_done = False
+
+# This will be synced with query params further down
 if "page" not in st.session_state:
     st.session_state.page = "home"
 
-if "last_plan" not in st.session_state:
-    st.session_state.last_plan = None  # last assistant response for "Save consult"
-
-# ---------- Basic helper functions ----------
-def set_page(p: str):
-    st.session_state.page = p
-
-def append_message(role: str, text: str):
-    st.session_state.messages.append({"role": role, "text": text})
+# ---------- Navigation Helpers ----------
+def go_to(page: str):
+    st.session_state.page = page
+    try:
+        st.experimental_set_query_params(page=page)
+    except Exception:
+        pass
 
 def detect_severe_keywords(text: str) -> bool:
     severe = [
@@ -205,7 +282,10 @@ def detect_severe_keywords(text: str) -> bool:
     t = (text or "").lower()
     return any(word in t for word in severe)
 
-# ---------- OpenRouter real-time chat ----------
+def append_message(role: str, text: str):
+    st.session_state.messages.append({"role": role, "text": text})
+
+# ---------- OpenRouter Chat ----------
 SYSTEM_PROMPT = """
 You are SkinSync, a friendly but responsible AI dermatology assistant.
 Your goals:
@@ -244,7 +324,7 @@ def call_openrouter_chat(messages):
     except Exception as e:
         return None, f"Error calling OpenRouter: {e}"
 
-# ---------- Simple “ML-like” Acne/Redness Analysis ----------
+# ---------- CV-like redness analysis ----------
 def analyze_skin_image(image: Image.Image):
     img = image.convert("RGB")
     arr = np.array(img).astype("float32")
@@ -268,12 +348,39 @@ def analyze_skin_image(image: Image.Image):
 
     return mean_red, severity
 
+# ---------- Splash Screen ----------
+def render_splash():
+    st.markdown(
+        """
+        <div class="splash-wrapper">
+          <div class="splash-inner">
+            <div class="splash-sub">AI · SKINCARE · DERMATOLOGY</div>
+            <div class="splash-title">SkinSync</div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+# Show splash once per session
+if not st.session_state.splash_done:
+    render_splash()
+    # small delay then mark splash done and rerun
+    time.sleep(1.5)
+    st.session_state.splash_done = True
+    st.experimental_rerun()
+
+# ---------- Sync page with query params ----------
+qs = st.experimental_get_query_params()
+if "page" in qs:
+    st.session_state.page = qs["page"][0]
+
 # ---------- Layout helpers ----------
 def render_back_to_home():
     with st.container():
         st.markdown('<div class="back-button-container page-container">', unsafe_allow_html=True)
         if st.button("← Back to Home"):
-            set_page("home")
+            go_to("home")
         st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------- Pages ----------
@@ -294,39 +401,81 @@ def render_home():
     st.markdown('<div class="feature-grid">', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
 
-    # Card 1 - Chat
+    # Row 1
     with col1:
-        st.markdown('<div class="feature-card-wrapper">', unsafe_allow_html=True)
-        if st.button("🩺  AI Dermatologist Chat\n\nDescribe your skin and get a personalised, gentle AM/PM routine.",
-                     key="card_chat"):
-            set_page("chat")
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(
+            """
+            <a class="card-link" href="?page=chat">
+              <div class="premium-card">
+                <div class="card-header-line">
+                  <span class="card-emoji">🩺</span>
+                  <span>AI Dermatologist Chat</span>
+                </div>
+                <div class="card-subtitle">
+                  Describe your skin and get a personalised, gentle AM/PM routine.
+                </div>
+              </div>
+            </a>
+            """,
+            unsafe_allow_html=True,
+        )
 
-    # Card 2 - Scan
     with col2:
-        st.markdown('<div class="feature-card-wrapper">', unsafe_allow_html=True)
-        if st.button("📷  Skin Analysis\n\nUpload a face photo to estimate redness and get gentle-care tips.",
-                     key="card_scan"):
-            set_page("scan")
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(
+            """
+            <a class="card-link" href="?page=scan">
+              <div class="premium-card">
+                <div class="card-header-line">
+                  <span class="card-emoji">📷</span>
+                  <span>Skin Analysis</span>
+                </div>
+                <div class="card-subtitle">
+                  Upload a face photo to estimate redness and get gentle-care tips.
+                </div>
+              </div>
+            </a>
+            """,
+            unsafe_allow_html=True,
+        )
 
+    # Row 2
     col3, col4 = st.columns(2)
 
-    # Card 3 - Appointments
     with col3:
-        st.markdown('<div class="feature-card-wrapper">', unsafe_allow_html=True)
-        if st.button("📅  Appointments\n\nBook consultation slots that can later link to a real clinic backend.",
-                     key="card_appt"):
-            set_page("appointments")
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(
+            """
+            <a class="card-link" href="?page=appointments">
+              <div class="premium-card">
+                <div class="card-header-line">
+                  <span class="card-emoji">📅</span>
+                  <span>Appointments</span>
+                </div>
+                <div class="card-subtitle">
+                  Book consultation slots that can later link to a real clinic backend.
+                </div>
+              </div>
+            </a>
+            """,
+            unsafe_allow_html=True,
+        )
 
-    # Card 4 - History
     with col4:
-        st.markdown('<div class="feature-card-wrapper">', unsafe_allow_html=True)
-        if st.button("📋  Consult History\n\nSee your saved consults and generated routines.",
-                     key="card_history"):
-            set_page("history")
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(
+            """
+            <a class="card-link" href="?page=history">
+              <div class="premium-card">
+                <div class="card-header-line">
+                  <span class="card-emoji">📋</span>
+                  <span>Consult History</span>
+                </div>
+                <div class="card-subtitle">
+                  See your saved consults and generated routines at a glance.
+                </div>
+              </div>
+            </a>
+            """,
+            unsafe_allow_html=True,
+        )
 
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
