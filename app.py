@@ -328,7 +328,7 @@ def render_animated_splash():
 if not st.session_state.get("splash_done", False):
     render_animated_splash()
     st.session_state["splash_done"] = True
-    st.stop()
+  
 
 # ========= SYNC PAGE FROM URL (for ?page=chat etc.) ==========
 qs = st.experimental_get_query_params()
