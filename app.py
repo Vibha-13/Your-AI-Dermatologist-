@@ -408,108 +408,64 @@ def analyze_skin_image(image: Image.Image):
 
     return mean_red, sev
 
-# ---------- Splash Screen ----------
 def render_splash():
-    st.markdown(
-        """
-        <style>
-        #splash-wrapper {
-            position: fixed;
-            inset: 0;
-            width: 100vw;
-            height: 100vh;
-            background: radial-gradient(circle at top, #fff5fb 0%, #f6ddea 40%, #f1cfe3 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 999999;
-            opacity: 1;
-            transition: opacity 0.8s ease-out;
-        }
+    st.markdown("""
+    <style>
+    #splash-wrapper {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        background: radial-gradient(circle at top, #fff5fb 0%, #f6ddea 40%, #f1cfe3 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999999;
+        animation: fadeOutSplash 2.5s ease-out forwards;
+    }
 
-        .splash-inner {
-            text-align: center;
-        }
+    @keyframes fadeOutSplash {
+        0% { opacity: 1; }
+        75% { opacity: 1; }
+        100% { opacity: 0; visibility: hidden; }
+    }
 
-        .splash-title {
-            font-family: 'Playfair Display', serif;
-            font-size: 46px;
-            letter-spacing: 0.20em;
-            text-transform: uppercase;
-            color: #2b1826;
-            position: relative;
-            display: inline-block;
-            padding: 0 12px;
-            opacity: 0;
-            animation: fadeInTitle 0.5s ease-out forwards;
-            animation-delay: 0.3s;
-        }
+    .splash-inner {
+        text-align: center;
+        animation: fadeText 1.2s ease-out forwards;
+    }
 
-        @keyframes fadeInTitle {
-            from { opacity: 0; transform: translateY(8px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
+    @keyframes fadeText {
+        0% { opacity: 0; transform: translateY(10px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
 
-        /* Shine animation */
-        .splash-title::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 60%;
-            height: 100%;
-            background: linear-gradient(
-                120deg,
-                transparent,
-                rgba(255,255,255,0.9),
-                transparent
-            );
-            transform: skewX(-20deg);
-            animation: shine 1.3s ease-out forwards;
-            animation-delay: 0.8s;
-        }
+    .splash-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 46px;
+        letter-spacing: 0.20em;
+        text-transform: uppercase;
+        color: #2b1826;
+        position: relative;
+        display: inline-block;
+        padding: 0 12px;
+        animation: shineText 1.4s ease-out forwards 0.6s;
+    }
 
-        @keyframes shine {
-            0% { left: -100%; }
-            100% { left: 120%; }
-        }
+    @keyframes shineText {
+        0% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
 
-        .splash-sub {
-            margin-bottom: 1rem;
-            font-size: 12px;
-            letter-spacing: 0.25em;
-            color: #7a5a71;
-            opacity: 0;
-            animation: fadeInSub 0.6s ease-out forwards;
-            animation-delay: 0.5s;
-        }
+    </style>
 
-        @keyframes fadeInSub {
-            from { opacity: 0; transform: translateY(6px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-        </style>
-
-        <div id="splash-wrapper">
-            <div class="splash-inner">
-                <div class="splash-sub">AI · SKINCARE · DERMATOLOGY</div>
-                <div class="splash-title">SKINSYNC</div>
-            </div>
+    <div id="splash-wrapper">
+        <div class="splash-inner">
+            <div class="splash-title">SKINSYNC</div>
         </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-        <script>
-        // Fade out and remove automatically
-        setTimeout(function() {
-            let splash = document.getElementById("splash-wrapper");
-            if (splash) {
-                splash.style.opacity = "0";
-                setTimeout(() => { splash.remove(); }, 900);
-            }
-        }, 2300);  // 2.3 seconds total display time
-        </script>
-        """,
-        unsafe_allow_html=True,
-    )
 
 # ---------- Show splash once ----------
 if not st.session_state.splash_done:
