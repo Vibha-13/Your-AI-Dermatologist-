@@ -9,7 +9,6 @@ from io import BytesIO
 from PIL import Image
 import numpy as np
 import requests
-import time
 
 # ---------- Env & API Key ----------
 load_dotenv()
@@ -47,64 +46,7 @@ st.markdown(
     }
 
     .stApp {
-        background: linear-gradient(
-            180deg,
-            #fffafb 0%,
-            #fef3f7 30%,
-            #f9e7f1 65%,
-            #f4dde9 100%
-        );
-    }
-
-    /* Splash screen */
-    .splash-wrapper {
-        position: fixed;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(circle at top, #fff5fb 0, #f6ddea 40%, #f1cfe3 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-    }
-    .splash-inner {
-        text-align: center;
-    }
-    .splash-title {
-        font-family: 'Playfair Display', serif;
-        font-size: 44px;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-        color: #2b1826;
-        position: relative;
-        display: inline-block;
-        padding: 0 10px;
-        overflow: hidden;
-    }
-    .splash-title::after {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: -60%;
-        width: 50%;
-        height: 100%;
-        background: linear-gradient(120deg, transparent, rgba(255,255,255,0.85), transparent);
-        transform: skewX(-20deg);
-        animation: shine 1.1s ease-out forwards;
-        animation-delay: 0.1s;
-    }
-    .splash-sub {
-        margin-bottom: 0.8rem;
-        font-size: 11px;
-        letter-spacing: 0.28em;
-        text-transform: uppercase;
-        color: #7a5a71;
-    }
-
-    @keyframes shine {
-        0% { left: -60%; }
-        100% { left: 130%; }
+        background: radial-gradient(circle at top, #fffafb 0%, #fef3f7 32%, #f9e7f1 65%, #f4dde9 100%);
     }
 
     /* Page fade-in */
@@ -151,13 +93,14 @@ st.markdown(
         border-radius: 22px;
         padding: 18px 22px;
         border: 1px solid rgba(255,255,255,0.9);
-        box-shadow: 0 18px 40px rgba(0,0,0,0.08);
+        box-shadow: 0 18px 40px rgba(0,0,0,0.09);
         backdrop-filter: blur(18px);
         -webkit-backdrop-filter: blur(18px);
-        transition: transform 0.18s ease-out,
-                    box-shadow 0.18s ease-out,
-                    border-color 0.18s ease-out,
-                    background 0.18s ease-out;
+        transition:
+            transform 0.18s ease-out,
+            box-shadow 0.18s ease-out,
+            border-color 0.18s ease-out,
+            background 0.18s ease-out;
         display: flex;
         flex-direction: column;
         gap: 4px;
@@ -168,8 +111,8 @@ st.markdown(
         border-color: #f1b9d3;
         background: linear-gradient(
             140deg,
-            rgba(255,255,255,0.98),
-            rgba(255,242,249,0.99)
+            rgba(255,255,255,0.99),
+            rgba(255,242,249,1)
         );
     }
     .card-header-line {
@@ -408,6 +351,7 @@ def analyze_skin_image(image: Image.Image):
 
     return mean_red, sev
 
+# ---------- Splash Screen (Glow Halo SKINSYNC) ----------
 def render_splash():
     st.markdown("""
     <style>
@@ -425,19 +369,33 @@ def render_splash():
     }
 
     @keyframes fadeOutSplash {
-        0% { opacity: 1; }
-        75% { opacity: 1; }
+        0%   { opacity: 1; }
+        80%  { opacity: 1; }
         100% { opacity: 0; visibility: hidden; }
     }
 
     .splash-inner {
         text-align: center;
-        animation: fadeText 1.2s ease-out forwards;
+        position: relative;
     }
 
-    @keyframes fadeText {
-        0% { opacity: 0; transform: translateY(10px); }
-        100% { opacity: 1; transform: translateY(0); }
+    .splash-halo {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 210px;
+        height: 210px;
+        transform: translate(-50%, -50%);
+        background: radial-gradient(circle, rgba(255,192,221,0.9) 0%, rgba(255,255,255,0) 60%);
+        filter: blur(18px);
+        opacity: 0.0;
+        animation: haloPulse 1.8s ease-out forwards;
+    }
+
+    @keyframes haloPulse {
+        0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+        40%  { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+        100% { opacity: 0.85; transform: translate(-50%, -50%) scale(1.0); }
     }
 
     .splash-title {
@@ -449,23 +407,40 @@ def render_splash():
         position: relative;
         display: inline-block;
         padding: 0 12px;
-        animation: shineText 1.4s ease-out forwards 0.6s;
+        opacity: 0;
+        animation: fadeInTitle 0.7s ease-out forwards;
+        animation-delay: 0.3s;
     }
 
-    @keyframes shineText {
-        0% { opacity: 0.5; }
-        100% { opacity: 1; }
+    @keyframes fadeInTitle {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
     }
 
+    .splash-sub {
+        margin-top: 0.6rem;
+        font-size: 12px;
+        letter-spacing: 0.25em;
+        color: #7a5a71;
+        opacity: 0;
+        animation: fadeInSub 0.6s ease-out forwards;
+        animation-delay: 0.7s;
+    }
+
+    @keyframes fadeInSub {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
     </style>
 
     <div id="splash-wrapper">
         <div class="splash-inner">
+            <div class="splash-halo"></div>
             <div class="splash-title">SKINSYNC</div>
+            <div class="splash-sub">AI · SKINCARE · DERMATOLOGY</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
-
 
 # ---------- Show splash once ----------
 if not st.session_state.splash_done:
