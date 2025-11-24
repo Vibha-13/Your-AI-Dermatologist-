@@ -9,6 +9,7 @@ from io import BytesIO
 from PIL import Image
 import numpy as np
 import requests
+import time
 
 # ---------- Env & API Key ----------
 load_dotenv()
@@ -42,11 +43,68 @@ st.markdown(
         font-family: 'Inter', sans-serif;
     }
     h1, h2, h3, h4 {
-        font-family: 'Playfair+Display', 'Playfair Display', serif;
+        font-family: 'Playfair Display', serif;
     }
 
     .stApp {
-        background: radial-gradient(circle at top, #fffafb 0%, #fef3f7 32%, #f9e7f1 65%, #f4dde9 100%);
+        background: linear-gradient(
+            180deg,
+            #fffdfd 0%,
+            #fff7fb 30%,
+            #feeef7 65%,
+            #fbe5f1 100%
+        );
+    }
+
+    /* Splash screen */
+    .splash-wrapper {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at top, #fff5fb 0, #f6ddea 40%, #f1cfe3 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+    .splash-inner {
+        text-align: center;
+    }
+    .splash-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 44px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #251320;
+        position: relative;
+        display: inline-block;
+        padding: 0 10px;
+        overflow: hidden;
+    }
+    .splash-title::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -60%;
+        width: 50%;
+        height: 100%;
+        background: linear-gradient(120deg, transparent, rgba(255,255,255,0.85), transparent);
+        transform: skewX(-20deg);
+        animation: shine 1.1s ease-out forwards;
+        animation-delay: 0.1s;
+    }
+    .splash-sub {
+        margin-bottom: 0.8rem;
+        font-size: 11px;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: #7a5a71;
+    }
+
+    @keyframes shine {
+        0% { left: -60%; }
+        100% { left: 130%; }
     }
 
     /* Page fade-in */
@@ -63,7 +121,7 @@ st.markdown(
         font-size: 38px;
         font-weight: 700;
         letter-spacing: 0.07em;
-        color: #2b1826;
+        color: #251320;
         text-align: center;
         margin-bottom: 0.1rem;
     }
@@ -87,20 +145,19 @@ st.markdown(
     .premium-card {
         background: linear-gradient(
             135deg,
-            rgba(255,255,255,0.96),
-            rgba(255,245,251,0.98)
+            rgba(255,255,255,0.98),
+            rgba(255,246,252,0.99)
         );
         border-radius: 22px;
         padding: 18px 22px;
         border: 1px solid rgba(255,255,255,0.9);
-        box-shadow: 0 18px 40px rgba(0,0,0,0.09);
+        box-shadow: 0 18px 40px rgba(0,0,0,0.08);
         backdrop-filter: blur(18px);
         -webkit-backdrop-filter: blur(18px);
-        transition:
-            transform 0.18s ease-out,
-            box-shadow 0.18s ease-out,
-            border-color 0.18s ease-out,
-            background 0.18s ease-out;
+        transition: transform 0.18s ease-out,
+                    box-shadow 0.18s ease-out,
+                    border-color 0.18s ease-out,
+                    background 0.18s ease-out;
         display: flex;
         flex-direction: column;
         gap: 4px;
@@ -111,7 +168,7 @@ st.markdown(
         border-color: #f1b9d3;
         background: linear-gradient(
             140deg,
-            rgba(255,255,255,0.99),
+            rgba(255,255,255,1),
             rgba(255,242,249,1)
         );
     }
@@ -143,19 +200,19 @@ st.markdown(
     }
     .derm-bubble {
         background: #ffffff;
-        padding: 10px 14px;
+        padding: 12px 16px;
         border-radius: 14px;
         margin-bottom: 8px;
         box-shadow: 0 4px 14px rgba(0,0,0,0.05);
-        color: #2b1826;
+        color: #251320 !important;
     }
     .user-bubble {
-        background: #fbe3f0;
-        padding: 10px 14px;
+        background: #fbe3f4;
+        padding: 12px 16px;
         border-radius: 14px;
         margin-bottom: 8px;
         margin-left: 40px;
-        color: #2b1826;
+        color: #251320 !important;
     }
 
     .back-button-container {
@@ -173,16 +230,26 @@ st.markdown(
     }
 
     /* Inputs & buttons (light theme override) */
+    input, textarea, .stTextInput, .stTextArea {
+        color: #251320 !important;
+    }
     .stTextInput > div > div > input,
     .stTextArea > div > textarea {
         background: #ffffff !important;
-        color: #2b1826 !important;
+        color: #251320 !important;
         border-radius: 14px !important;
         border: 1px solid #edd3e4 !important;
     }
+    ::placeholder {
+        color: #a27d98 !important;
+        opacity: 1 !important;
+    }
+    .stTextInput label, .stTextArea label {
+        color: #5c3b52 !important;
+    }
 
     .stButton > button {
-        background: #2b1826 !important;
+        background: #251320 !important;
         color: #ffffff !important;
         border-radius: 999px !important;
         border: none !important;
@@ -290,8 +357,7 @@ def call_openrouter_chat(messages):
         "X-Title": "SkinSync AI Dermatologist",
     }
     payload = {
-        # Balanced: fast + good reasoning
-        "model": "meta-llama/llama-3-70b-instruct",
+        "model": "openai/gpt-4o-mini",
         "messages": messages,
         "temperature": 0.65,
     }
@@ -306,146 +372,47 @@ def call_openrouter_chat(messages):
         return None, f"Error calling OpenRouter: {e}"
 
 def analyze_skin_image(image: Image.Image):
-    # Convert to numpy safely
     img = image.convert("RGB")
     arr = np.array(img).astype("float32")
 
-    # If empty / corrupted
-    if arr.size == 0:
-        return 0.0, "Image unreadable — try a clearer photo."
-
-    # Extract channels
     r = arr[:, :, 0]
     g = arr[:, :, 1]
     b = arr[:, :, 2]
+    redness = r - (g + b) / 2
 
-    # Redness index
-    redness = r - (g + b) / 2.0
-
-    # SAFE ptp calculation
-    try:
-        ptp = float(np.ptp(redness))   # <-- SAFE VERSION
-    except Exception:
-        return 0.0, "Could not analyze image — try a clearer photo."
-
-    # Uniform-color image (all same shade)
-    if ptp < 1e-6:
-        return 0.0, (
-            "Unable to detect redness — image seems too uniform in color.\n"
-            "Try a bright, natural-light photo where your face is clearly visible."
-        )
-
-    # Normalized redness map
-    redness_normalized = (redness - redness.min()) / (ptp + 1e-6)
+    redness_normalized = (redness - redness.min()) / (redness.ptp() + 1e-6)
     mean_red = float(redness_normalized.mean())
 
-    # Severity grading
     if mean_red < 0.25:
-        sev = "Very mild / almost no visible redness 🙂"
+        severity = "Very mild / almost no visible redness 🙂"
     elif mean_red < 0.45:
-        sev = "Mild redness — light irritation or occasional acne 🌸"
+        severity = "Mild redness — could be light irritation or occasional acne 🌸"
     elif mean_red < 0.65:
-        sev = "Moderate redness — noticeable inflammation 🔎"
+        severity = "Moderate redness — noticeable inflammation, monitor products used 🔎"
     else:
-        sev = "High redness — gentle care recommended; avoid strong actives ⚠️"
+        severity = "High redness — consider gentle care and, if painful, in-person dermatologist visit ⚠️"
 
-    return mean_red, sev
+    return mean_red, severity
 
-# ---------- Splash Screen (Glow Halo SKINSYNC) ----------
+# ---------- Splash Screen ----------
 def render_splash():
-    st.markdown("""
-    <style>
-    #splash-wrapper {
-        position: fixed;
-        inset: 0;
-        width: 100vw;
-        height: 100vh;
-        background: radial-gradient(circle at top, #fff5fb 0%, #f6ddea 40%, #f1cfe3 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 999999;
-        animation: fadeOutSplash 2.5s ease-out forwards;
-    }
-
-    @keyframes fadeOutSplash {
-        0%   { opacity: 1; }
-        80%  { opacity: 1; }
-        100% { opacity: 0; visibility: hidden; }
-    }
-
-    .splash-inner {
-        text-align: center;
-        position: relative;
-    }
-
-    .splash-halo {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 210px;
-        height: 210px;
-        transform: translate(-50%, -50%);
-        background: radial-gradient(circle, rgba(255,192,221,0.9) 0%, rgba(255,255,255,0) 60%);
-        filter: blur(18px);
-        opacity: 0.0;
-        animation: haloPulse 1.8s ease-out forwards;
-    }
-
-    @keyframes haloPulse {
-        0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
-        40%  { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
-        100% { opacity: 0.85; transform: translate(-50%, -50%) scale(1.0); }
-    }
-
-    .splash-title {
-        font-family: 'Playfair Display', serif;
-        font-size: 46px;
-        letter-spacing: 0.20em;
-        text-transform: uppercase;
-        color: #2b1826;
-        position: relative;
-        display: inline-block;
-        padding: 0 12px;
-        opacity: 0;
-        animation: fadeInTitle 0.7s ease-out forwards;
-        animation-delay: 0.3s;
-    }
-
-    @keyframes fadeInTitle {
-        from { opacity: 0; transform: translateY(10px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .splash-sub {
-        margin-top: 0.6rem;
-        font-size: 12px;
-        letter-spacing: 0.25em;
-        color: #7a5a71;
-        opacity: 0;
-        animation: fadeInSub 0.6s ease-out forwards;
-        animation-delay: 0.7s;
-    }
-
-    @keyframes fadeInSub {
-        from { opacity: 0; transform: translateY(6px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
-    </style>
-
-    <div id="splash-wrapper">
-        <div class="splash-inner">
-            <div class="splash-halo"></div>
-            <div class="splash-title">SKINSYNC</div>
+    st.markdown(
+        """
+        <div class="splash-wrapper">
+          <div class="splash-inner">
             <div class="splash-sub">AI · SKINCARE · DERMATOLOGY</div>
+            <div class="splash-title">SKINSYNC</div>
+          </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
+    time.sleep(1.5)
 
-# ---------- Show splash once ----------
 if not st.session_state.splash_done:
     render_splash()
     st.session_state.splash_done = True
+    st.stop()
 
 # ---------- Sync with query params ----------
 qs = st.experimental_get_query_params()
@@ -599,11 +566,7 @@ def render_chat():
                 append_message("user", user_input)
 
                 or_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-
-                # Only keep the last ~10 messages for speed
-                recent_history = st.session_state.messages[-10:]
-
-                for m in recent_history:
+                for m in st.session_state.messages:
                     or_messages.append({"role": m["role"], "content": m["text"]})
 
                 if detect_severe_keywords(user_input):
