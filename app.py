@@ -298,6 +298,34 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+st.markdown("""
+<style>
+
+.stButton > button {
+    background-color: #2b1826 !important;   /* plum */
+    color: white !important;                /* visible text */
+    border-radius: 14px !important;
+    padding: 0.6rem 1.2rem !important;
+    font-weight: 600 !important;
+    border: none !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* Fix disabled state so the text stays visible */
+.stButton > button:disabled {
+    background-color: #3b2331 !important;
+    color: #ffffff80 !important;           /* ghost white */
+}
+
+/* Ensure any icons inside buttons also turn white */
+.stButton svg {
+    fill: white !important;
+    stroke: white !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
 
 # ---------- DB Setup ----------
 DB_PATH = "skinsync.db"
