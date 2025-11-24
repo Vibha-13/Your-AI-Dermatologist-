@@ -347,12 +347,11 @@ def call_openrouter_chat(messages):
         "X-Title": "SkinSync AI Dermatologist",
     }
     payload = {
-    # Balanced: fast + good reasoning
-    "model": "meta-llama/llama-3-70b-instruct",
-    "messages": messages,
-    "temperature": 0.65,
-}
-
+        # Balanced: fast + good reasoning
+        "model": "meta-llama/llama-3-70b-instruct",
+        "messages": messages,
+        "temperature": 0.65,
+    }
 
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
@@ -408,7 +407,6 @@ def analyze_skin_image(image: Image.Image):
         sev = "High redness — gentle care recommended; avoid strong actives ⚠️"
 
     return mean_red, sev
-
 
 # ---------- Splash Screen ----------
 def render_splash():
@@ -513,8 +511,10 @@ def render_splash():
         unsafe_allow_html=True,
     )
 
-
-
+# ---------- Show splash once ----------
+if not st.session_state.splash_done:
+    render_splash()
+    st.session_state.splash_done = True
 
 # ---------- Sync with query params ----------
 qs = st.experimental_get_query_params()
@@ -671,9 +671,9 @@ def render_chat():
 
                 # Only keep the last ~10 messages for speed
                 recent_history = st.session_state.messages[-10:]
-  
+
                 for m in recent_history:
-                   or_messages.append({"role": m["role"], "content": m["text"]})
+                    or_messages.append({"role": m["role"], "content": m["text"]})
 
                 if detect_severe_keywords(user_input):
                     warn = (
