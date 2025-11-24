@@ -395,6 +395,9 @@ def analyze_skin_image(image: Image.Image):
     return mean_red, severity
 
 # ---------- Splash Screen ----------
+if "splash_done" not in st.session_state:
+    st.session_state.splash_done = False
+
 def render_splash():
     st.markdown(
         """
@@ -407,12 +410,14 @@ def render_splash():
         """,
         unsafe_allow_html=True,
     )
-    time.sleep(1.5)
+    time.sleep(1.6)
 
-if not st.session_state.splash_done:
+# Show splash only on the FIRST full page load
+if st.session_state.splash_done is False and st.session_state.page == "home":
     render_splash()
     st.session_state.splash_done = True
-    st.stop()
+    st.experimental_rerun()
+
 
 # ---------- Sync with query params ----------
 qs = st.experimental_get_query_params()
