@@ -368,62 +368,65 @@ def analyze_skin_image(image: Image.Image):
     img = image.convert("RGB")
     arr = np.array(img).astype("float32")
 
-    # If the image is somehow empty or corrupted
+    # If empty / corrupted
     if arr.size == 0:
-        return 0.0, "Image corrupted or unreadable — please upload a clearer photo."
+        return 0.0, "Image unreadable — try a clearer photo."
 
+    # Extract channels
     r = arr[:, :, 0]
     g = arr[:, :, 1]
     b = arr[:, :, 2]
 
-    # Compute redness
+    # Redness index
     redness = r - (g + b) / 2.0
 
-    # Normalize safe
-    ptp = redness.ptp()
+    # SAFE ptp calculation
+    try:
+        ptp = float(np.ptp(redness))   # <-- SAFE VERSION
+    except Exception:
+        return 0.0, "Could not analyze image — try a clearer photo."
 
-    # Prevent division errors
-    if ptp < 1e-6:  
-        # This means the entire image has almost identical color everywhere
-        return 0.0, "Unable to detect redness — try a clearer face image with normal lighting."
+    # Uniform-color image (all same shade)
+    if ptp < 1e-6:
+        return 0.0, (
+            "Unable to detect redness — image seems too uniform in color.\n"
+            "Try a bright, natural-light photo where your face is clearly visible."
+        )
 
+    # Normalized redness map
     redness_normalized = (redness - redness.min()) / (ptp + 1e-6)
     mean_red = float(redness_normalized.mean())
 
-    # Grading
+    # Severity grading
     if mean_red < 0.25:
-        severity = "Very mild / almost no visible redness 🙂"
+        sev = "Very mild / almost no visible redness 🙂"
     elif mean_red < 0.45:
-        severity = "Mild redness — could be light irritation or occasional acne 🌸"
+        sev = "Mild redness — light irritation or occasional acne 🌸"
     elif mean_red < 0.65:
-        severity = "Moderate redness — noticeable inflammation, monitor products used 🔎"
+        sev = "Moderate redness — noticeable inflammation 🔎"
     else:
-        severity = "High redness — consider gentle care and, if painful, in-person dermatologist visit ⚠️"
+        sev = "High redness — gentle care recommended; avoid strong actives ⚠️"
 
-    return mean_red, severity
+    return mean_red, sev
+
 
 # ---------- Splash Screen ----------
 def render_splash():
     st.markdown(
         """
         <style>
-        .splash-wrapper {
+        #splash-wrapper {
             position: fixed;
             inset: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at top, #fff5fb 0, #f6ddea 40%, #f1cfe3 100%);
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at top, #fff5fb 0%, #f6ddea 40%, #f1cfe3 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 99999;
-            animation: fadeOutSplash 0.8s ease-out forwards;
-            animation-delay: 2.2s; /* show splash fully first */
-        }
-
-        @keyframes fadeOutSplash {
-            0% { opacity: 1; }
-            100% { opacity: 0; visibility: hidden; }
+            z-index: 999999;
+            opacity: 1;
+            transition: opacity 0.8s ease-out;
         }
 
         .splash-inner {
@@ -432,13 +435,21 @@ def render_splash():
 
         .splash-title {
             font-family: 'Playfair Display', serif;
-            font-size: 44px;
-            letter-spacing: 0.18em;
+            font-size: 46px;
+            letter-spacing: 0.20em;
             text-transform: uppercase;
             color: #2b1826;
             position: relative;
             display: inline-block;
-            padding: 0 10px;
+            padding: 0 12px;
+            opacity: 0;
+            animation: fadeInTitle 0.5s ease-out forwards;
+            animation-delay: 0.3s;
+        }
+
+        @keyframes fadeInTitle {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
         /* Shine animation */
@@ -446,29 +457,33 @@ def render_splash():
             content: "";
             position: absolute;
             top: 0;
-            left: -80%;
+            left: -100%;
             width: 60%;
             height: 100%;
-            background: linear-gradient(120deg, transparent, rgba(255,255,255,0.85), transparent);
+            background: linear-gradient(
+                120deg,
+                transparent,
+                rgba(255,255,255,0.9),
+                transparent
+            );
             transform: skewX(-20deg);
             animation: shine 1.3s ease-out forwards;
-            animation-delay: 0.4s; /* show text first, then shine */
+            animation-delay: 0.8s;
         }
 
         @keyframes shine {
-            0% { left: -80%; }
-            100% { left: 130%; }
+            0% { left: -100%; }
+            100% { left: 120%; }
         }
 
         .splash-sub {
-            margin-bottom: 0.8rem;
-            font-size: 11px;
-            letter-spacing: 0.28em;
-            text-transform: uppercase;
+            margin-bottom: 1rem;
+            font-size: 12px;
+            letter-spacing: 0.25em;
             color: #7a5a71;
             opacity: 0;
-            animation: fadeInSub 0.7s ease-out forwards;
-            animation-delay: 0.3s;
+            animation: fadeInSub 0.6s ease-out forwards;
+            animation-delay: 0.5s;
         }
 
         @keyframes fadeInSub {
@@ -477,15 +492,27 @@ def render_splash():
         }
         </style>
 
-        <div class="splash-wrapper">
+        <div id="splash-wrapper">
             <div class="splash-inner">
                 <div class="splash-sub">AI · SKINCARE · DERMATOLOGY</div>
                 <div class="splash-title">SKINSYNC</div>
             </div>
         </div>
+
+        <script>
+        // Fade out and remove automatically
+        setTimeout(function() {
+            let splash = document.getElementById("splash-wrapper");
+            if (splash) {
+                splash.style.opacity = "0";
+                setTimeout(() => { splash.remove(); }, 900);
+            }
+        }, 2300);  // 2.3 seconds total display time
+        </script>
         """,
         unsafe_allow_html=True,
     )
+
 
 
 
