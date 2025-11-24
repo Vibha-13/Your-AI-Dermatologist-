@@ -69,6 +69,23 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+st.markdown("""
+<style>
+
+button, .stButton>button {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+.stButton>button:hover {
+    background-color: #3c2230 !important;
+    color: #ffffff !important;
+    transform: scale(1.02);
+    transition: 0.15s ease-in-out;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 # ---------- Global Styles (clean rosy aesthetic) ----------
 st.markdown(
