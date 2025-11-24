@@ -645,7 +645,7 @@ def render_chat():
                 # Only keep the last ~10 messages for speed
                 recent_history = st.session_state.messages[-10:]
   
-                   for m in recent_history:
+                for m in recent_history:
                    or_messages.append({"role": m["role"], "content": m["text"]})
 
                 if detect_severe_keywords(user_input):
