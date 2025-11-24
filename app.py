@@ -9,7 +9,6 @@ from io import BytesIO
 from PIL import Image
 import numpy as np
 import requests
-import time
 
 # ---------- Env & API Key ----------
 load_dotenv()
@@ -22,7 +21,8 @@ st.set_page_config(
     layout="wide",
 )
 
-# Force light mode on devices that are in dark mode
+# ---------- Global Light Theme / Text Fix ----------
+# Force light mode even if device is in dark mode
 st.markdown("""
     <style>
     @media (prefers-color-scheme: dark) {
@@ -30,21 +30,27 @@ st.markdown("""
             color-scheme: light !important;
         }
     }
+
+    /* GLOBAL TEXT COLOR so nothing is white on pink */
+    html, body, [class*="css"] {
+        color: #2b1826 !important;
+        font-family: 'Inter', sans-serif;
+    }
+    h1, h2, h3, h4, h5 {
+        color: #1f111a !important;
+        font-family: 'Playfair Display', serif !important;
+    }
+    p, span, label, li, td, th, .stMarkdown, .stText {
+        color: #35202b !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# ---------- Global Styles (clean girl rosy aesthetic) ----------
+# ---------- Global Styles (clean rosy aesthetic) ----------
 st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
-
-    html, body, [class*="css"]  {
-        font-family: 'Inter', sans-serif;
-    }
-    h1, h2, h3, h4 {
-        font-family: 'Playfair Display', serif;
-    }
 
     .stApp {
         background: linear-gradient(
@@ -56,43 +62,29 @@ st.markdown(
         );
     }
 
-    /* Splash screen */
+    /* Splash screen (fade logo) */
     .splash-wrapper {
         position: fixed;
         inset: 0;
         width: 100%;
         height: 100%;
-        background: radial-gradient(circle at top, #fff5fb 0, #f6ddea 40%, #f1cfe3 100%);
+        background: radial-gradient(circle at top, #ffeaf6 0, #f6ddea 40%, #f1cfe3 100%);
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 9999;
+        animation: splashFade 0.9s ease-out forwards;
     }
     .splash-inner {
         text-align: center;
     }
     .splash-title {
         font-family: 'Playfair Display', serif;
-        font-size: 44px;
+        font-size: 40px;
         letter-spacing: 0.18em;
         text-transform: uppercase;
         color: #251320;
-        position: relative;
-        display: inline-block;
         padding: 0 10px;
-        overflow: hidden;
-    }
-    .splash-title::after {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: -60%;
-        width: 50%;
-        height: 100%;
-        background: linear-gradient(120deg, transparent, rgba(255,255,255,0.85), transparent);
-        transform: skewX(-20deg);
-        animation: shine 1.1s ease-out forwards;
-        animation-delay: 0.1s;
     }
     .splash-sub {
         margin-bottom: 0.8rem;
@@ -101,24 +93,23 @@ st.markdown(
         text-transform: uppercase;
         color: #7a5a71;
     }
-
-    @keyframes shine {
-        0% { left: -60%; }
-        100% { left: 130%; }
+    @keyframes splashFade {
+        from { opacity: 0; }
+        to   { opacity: 1; }
     }
 
     /* Page fade-in */
     .page-container {
-        animation: fadeInUp 0.35s ease-out;
+        animation: fadeInUp 0.3s ease-out;
     }
     @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(12px); }
+        from { opacity: 0; transform: translateY(8px); }
         to   { opacity: 1; transform: translateY(0); }
     }
 
     /* Hero */
     .hero-title {
-        font-size: 38px;
+        font-size: 34px;
         font-weight: 700;
         letter-spacing: 0.07em;
         color: #251320;
@@ -152,8 +143,8 @@ st.markdown(
         padding: 18px 22px;
         border: 1px solid rgba(255,255,255,0.9);
         box-shadow: 0 18px 40px rgba(0,0,0,0.08);
-        backdrop-filter: blur(18px);
-        -webkit-backdrop-filter: blur(18px);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
         transition: transform 0.18s ease-out,
                     box-shadow 0.18s ease-out,
                     border-color 0.18s ease-out,
@@ -188,6 +179,7 @@ st.markdown(
         color: #8b6c80;
     }
 
+    /* Chat card & bubbles */
     .chat-card {
         background: rgba(255,255,255,0.98);
         border-radius: 18px;
@@ -215,6 +207,7 @@ st.markdown(
         color: #251320 !important;
     }
 
+    /* Back button */
     .back-button-container {
         max-width: 780px;
         margin: 0.6rem auto 0 auto;
@@ -229,7 +222,7 @@ st.markdown(
         box-shadow: 0 8px 18px rgba(0,0,0,0.06);
     }
 
-    /* Inputs & buttons (light theme override) */
+    /* Inputs & buttons */
     input, textarea, .stTextInput, .stTextArea {
         color: #251320 !important;
     }
@@ -282,7 +275,6 @@ c.execute(
         created_at TEXT
     )"""
 )
-
 c.execute(
     """CREATE TABLE IF NOT EXISTS consults (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -296,18 +288,14 @@ conn.commit()
 # ---------- Session State ----------
 if "session_id" not in st.session_state:
     st.session_state.session_id = datetime.utcnow().isoformat()
-
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
 if "last_plan" not in st.session_state:
     st.session_state.last_plan = None
-
-if "splash_done" not in st.session_state:
-    st.session_state.splash_done = False
-
 if "page" not in st.session_state:
     st.session_state.page = "home"
+if "splash_shown" not in st.session_state:
+    st.session_state.splash_shown = False
 
 # ---------- Helpers ----------
 def go_to(page: str):
@@ -318,15 +306,7 @@ def go_to(page: str):
         pass
 
 def detect_severe_keywords(text: str) -> bool:
-    severe = [
-        "bleeding",
-        "pus",
-        "severe pain",
-        "fever",
-        "spreading",
-        "infection",
-        "open sore",
-    ]
+    severe = ["bleeding", "pus", "severe pain", "fever", "spreading", "infection", "open sore"]
     t = (text or "").lower()
     return any(word in t for word in severe)
 
@@ -347,8 +327,7 @@ Your goals:
 
 def call_openrouter_chat(messages):
     if not OPENROUTER_API_KEY:
-        return None, "No OpenRouter API key found. Add OPENROUTER_API_KEY in your .env."
-
+        return None, "No OPENROUTER_API_KEY found in environment."
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -361,7 +340,6 @@ def call_openrouter_chat(messages):
         "messages": messages,
         "temperature": 0.65,
     }
-
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
         resp.raise_for_status()
@@ -374,15 +352,12 @@ def call_openrouter_chat(messages):
 def analyze_skin_image(image: Image.Image):
     img = image.convert("RGB")
     arr = np.array(img).astype("float32")
-
     r = arr[:, :, 0]
     g = arr[:, :, 1]
     b = arr[:, :, 2]
     redness = r - (g + b) / 2
-
     redness_normalized = (redness - redness.min()) / (redness.ptp() + 1e-6)
     mean_red = float(redness_normalized.mean())
-
     if mean_red < 0.25:
         severity = "Very mild / almost no visible redness 🙂"
     elif mean_red < 0.45:
@@ -391,13 +366,9 @@ def analyze_skin_image(image: Image.Image):
         severity = "Moderate redness — noticeable inflammation, monitor products used 🔎"
     else:
         severity = "High redness — consider gentle care and, if painful, in-person dermatologist visit ⚠️"
-
     return mean_red, severity
 
-# ---------- Splash Screen ----------
-if "splash_done" not in st.session_state:
-    st.session_state.splash_done = False
-
+# ---------- Splash (no blocking, no sleep) ----------
 def render_splash():
     st.markdown(
         """
@@ -410,19 +381,16 @@ def render_splash():
         """,
         unsafe_allow_html=True,
     )
-    time.sleep(1.6)
 
-# Show splash only on the FIRST full page load
-if st.session_state.splash_done is False and st.session_state.page == "home":
-    render_splash()
-    st.session_state.splash_done = True
-    st.experimental_rerun()
-
-
-# ---------- Sync with query params ----------
+# Only show splash once, and only if landing on home
 qs = st.experimental_get_query_params()
 if "page" in qs:
     st.session_state.page = qs["page"][0]
+
+if not st.session_state.splash_shown and st.session_state.page == "home":
+    render_splash()
+    st.session_state.splash_shown = True
+    st.stop()
 
 # ---------- Layout Helpers ----------
 def render_back_to_home():
@@ -439,7 +407,7 @@ def render_home():
     st.markdown('<div class="hero-sub">AI · SKINCARE · DERMATOLOGY</div>', unsafe_allow_html=True)
     st.markdown('<div class="hero-title">SkinSync</div>', unsafe_allow_html=True)
     st.markdown(
-        "<p style='text-align:center;color:#7f627b;font-size:14px;margin-top:-4px;'>"
+        "<p style='text-align:center;font-size:14px;margin-top:-4px;'>"
         "Your AI-powered skincare companion for gentle, science-based routines."
         "</p>",
         unsafe_allow_html=True,
@@ -450,7 +418,6 @@ def render_home():
     st.markdown('<div class="feature-grid">', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
 
-    # Row 1
     with col1:
         st.markdown(
             """
@@ -468,7 +435,6 @@ def render_home():
             """,
             unsafe_allow_html=True,
         )
-
     with col2:
         st.markdown(
             """
@@ -487,9 +453,7 @@ def render_home():
             unsafe_allow_html=True,
         )
 
-    # Row 2
     col3, col4 = st.columns(2)
-
     with col3:
         st.markdown(
             """
@@ -507,7 +471,6 @@ def render_home():
             """,
             unsafe_allow_html=True,
         )
-
     with col4:
         st.markdown(
             """
@@ -581,6 +544,7 @@ def render_chat():
                         "but please consider seeing an in-person dermatologist soon. 🧑‍⚕️"
                     )
                     append_message("assistant", warn)
+                    or_messages.append({"role": "assistant", "content": warn})
 
                 reply_text, err = call_openrouter_chat(or_messages)
                 if err:
@@ -696,7 +660,7 @@ def render_appointments():
         email = st.text_input("Email")
         city = st.text_input("City")
         date = st.date_input("Preferred date", min_value=datetime.today())
-        time = st.time_input("Preferred time")
+        time_val = st.time_input("Preferred time")
         reason = st.text_area("Reason for visit", value="Skin consultation")
         submitted = st.form_submit_button("Book appointment")
         if submitted:
@@ -708,7 +672,7 @@ def render_appointments():
                     email,
                     city,
                     str(date),
-                    str(time),
+                    str(time_val),
                     reason,
                     datetime.utcnow().isoformat(),
                 ),
