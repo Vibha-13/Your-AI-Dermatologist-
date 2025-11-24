@@ -347,10 +347,12 @@ def call_openrouter_chat(messages):
         "X-Title": "SkinSync AI Dermatologist",
     }
     payload = {
-        "model": "openai/gpt-4o-mini",
-        "messages": messages,
-        "temperature": 0.65,
-    }
+    # Balanced: fast + good reasoning
+    "model": "meta-llama/llama-3-70b-instruct",
+    "messages": messages,
+    "temperature": 0.65,
+}
+
 
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
@@ -362,17 +364,33 @@ def call_openrouter_chat(messages):
         return None, f"Error calling OpenRouter: {e}"
 
 def analyze_skin_image(image: Image.Image):
+    # Convert to numpy safely
     img = image.convert("RGB")
     arr = np.array(img).astype("float32")
+
+    # If the image is somehow empty or corrupted
+    if arr.size == 0:
+        return 0.0, "Image corrupted or unreadable — please upload a clearer photo."
 
     r = arr[:, :, 0]
     g = arr[:, :, 1]
     b = arr[:, :, 2]
-    redness = r - (g + b) / 2
 
-    redness_normalized = (redness - redness.min()) / (redness.ptp() + 1e-6)
+    # Compute redness
+    redness = r - (g + b) / 2.0
+
+    # Normalize safe
+    ptp = redness.ptp()
+
+    # Prevent division errors
+    if ptp < 1e-6:  
+        # This means the entire image has almost identical color everywhere
+        return 0.0, "Unable to detect redness — try a clearer face image with normal lighting."
+
+    redness_normalized = (redness - redness.min()) / (ptp + 1e-6)
     mean_red = float(redness_normalized.mean())
 
+    # Grading
     if mean_red < 0.25:
         severity = "Very mild / almost no visible redness 🙂"
     elif mean_red < 0.45:
@@ -623,8 +641,12 @@ def render_chat():
                 append_message("user", user_input)
 
                 or_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-                for m in st.session_state.messages:
-                    or_messages.append({"role": m["role"], "content": m["text"]})
+
+                # Only keep the last ~10 messages for speed
+                recent_history = st.session_state.messages[-10:]
+  
+                   for m in recent_history:
+                   or_messages.append({"role": m["role"], "content": m["text"]})
 
                 if detect_severe_keywords(user_input):
                     warn = (
