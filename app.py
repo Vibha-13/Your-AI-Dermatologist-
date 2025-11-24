@@ -385,7 +385,6 @@ def analyze_skin_image(image: Image.Image):
     return mean_red, severity
 
 # ---------- Splash Screen ----------
-# ---------- Splash Screen ----------
 def render_splash():
     st.markdown(
         """
@@ -400,29 +399,76 @@ def render_splash():
             align-items: center;
             justify-content: center;
             z-index: 99999;
+            animation: fadeOutSplash 0.8s ease-out forwards;
+            animation-delay: 2.2s; /* show splash fully first */
+        }
+
+        @keyframes fadeOutSplash {
+            0% { opacity: 1; }
+            100% { opacity: 0; visibility: hidden; }
+        }
+
+        .splash-inner {
+            text-align: center;
+        }
+
+        .splash-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 44px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #2b1826;
+            position: relative;
+            display: inline-block;
+            padding: 0 10px;
+        }
+
+        /* Shine animation */
+        .splash-title::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -80%;
+            width: 60%;
+            height: 100%;
+            background: linear-gradient(120deg, transparent, rgba(255,255,255,0.85), transparent);
+            transform: skewX(-20deg);
+            animation: shine 1.3s ease-out forwards;
+            animation-delay: 0.4s; /* show text first, then shine */
+        }
+
+        @keyframes shine {
+            0% { left: -80%; }
+            100% { left: 130%; }
+        }
+
+        .splash-sub {
+            margin-bottom: 0.8rem;
+            font-size: 11px;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: #7a5a71;
+            opacity: 0;
+            animation: fadeInSub 0.7s ease-out forwards;
+            animation-delay: 0.3s;
+        }
+
+        @keyframes fadeInSub {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
         </style>
 
-        <div class="splash-wrapper" id="splash">
+        <div class="splash-wrapper">
             <div class="splash-inner">
                 <div class="splash-sub">AI · SKINCARE · DERMATOLOGY</div>
                 <div class="splash-title">SKINSYNC</div>
             </div>
         </div>
-
-        <script>
-        setTimeout(function(){
-            const splash = document.getElementById("splash");
-            if (splash) {
-                splash.style.opacity = "0";
-                splash.style.transition = "opacity 0.5s ease-out";
-                setTimeout(() => splash.remove(), 600);
-            }
-        }, 1500);
-        </script>
         """,
         unsafe_allow_html=True,
     )
+
 
 
 # ---------- Sync with query params ----------
