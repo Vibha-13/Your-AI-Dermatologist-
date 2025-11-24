@@ -20,6 +20,30 @@ st.set_page_config(
     page_icon="💠",
     layout="wide",
 )
+# Force Streamlit Light Theme (fixes black top bar on mobile)
+st.markdown("""
+    <style>
+        :root {
+            color-scheme: light !important;
+        }
+
+        /* Force Streamlit toolbar light */
+        header[data-testid="stHeader"] {
+            background-color: #ffffff !important;
+            color: #2b1826 !important;
+        }
+
+        header[data-testid="stHeader"] * {
+            color: #2b1826 !important;
+            fill: #2b1826 !important;
+        }
+
+        /* Remove the dark overlay from the top navbar */
+        div.block-container {
+            padding-top: 3rem !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # ---------- Global Light Theme / Text Fix ----------
 # Force light mode even if device is in dark mode
