@@ -385,24 +385,45 @@ def analyze_skin_image(image: Image.Image):
     return mean_red, severity
 
 # ---------- Splash Screen ----------
+# ---------- Splash Screen ----------
 def render_splash():
     st.markdown(
         """
-        <div class="splash-wrapper">
-          <div class="splash-inner">
-            <div class="splash-sub">AI · SKINCARE · DERMATOLOGY</div>
-            <div class="splash-title">SKINSYNC</div>
-          </div>
+        <style>
+        .splash-wrapper {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at top, #fff5fb 0, #f6ddea 40%, #f1cfe3 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+        }
+        </style>
+
+        <div class="splash-wrapper" id="splash">
+            <div class="splash-inner">
+                <div class="splash-sub">AI · SKINCARE · DERMATOLOGY</div>
+                <div class="splash-title">SKINSYNC</div>
+            </div>
         </div>
+
+        <script>
+        setTimeout(function(){
+            const splash = document.getElementById("splash");
+            if (splash) {
+                splash.style.opacity = "0";
+                splash.style.transition = "opacity 0.5s ease-out";
+                setTimeout(() => splash.remove(), 600);
+            }
+        }, 1500);
+        </script>
         """,
         unsafe_allow_html=True,
     )
-    time.sleep(1.5)
 
-if not st.session_state.splash_done:
-    render_splash()
-    st.session_state.splash_done = True
-    st.stop()
 
 # ---------- Sync with query params ----------
 qs = st.experimental_get_query_params()
