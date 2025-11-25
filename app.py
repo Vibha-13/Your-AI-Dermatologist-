@@ -21,7 +21,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# ---------- Force light theme + readable text everywhere ----------
+# ---------- Force light theme + readable text ----------
 st.markdown("""
 <style>
 /* prevent dark-mode madness on mobile */
@@ -29,48 +29,48 @@ st.markdown("""
     color-scheme: light !important;
 }
 
-/* top Streamlit header - make it light */
+/* top Streamlit header - make it light mauve */
 header[data-testid="stHeader"] {
-    background-color: #fdf7f0 !important;
-    color: #3b2618 !important;
+    background-color: #fdf3fa !important;
+    color: #3f2337 !important;
 }
 header[data-testid="stHeader"] * {
-    color: #3b2618 !important;
-    fill:  #3b2618 !important;
+    color: #3f2337 !important;
+    fill:  #3f2337 !important;
 }
 
-/* global text colours for beige background */
+/* global text colours for rose/mauve background */
 html, body, [class*="css"] {
-    color: #3a291d !important;
+    color: #2e1a24 !important;
     font-family: 'Inter', sans-serif;
 }
 h1, h2, h3, h4, h5, h6 {
-    color: #25170f !important;
+    color: #1f1117 !important;
     font-family: 'Playfair Display', serif !important;
 }
 p, span, label, li, td, th {
-    color: #3a291d !important;
+    color: #3a2431 !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- GLOBAL STYLES: luxury beige aesthetic ----------
+# ---------- GLOBAL STYLES: light rose + mauve aesthetic ----------
 st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
     .stApp {
-        background: radial-gradient(circle at top, #fffaf3 0, #f6ecdf 40%, #f1e3d3 100%);
+        background: radial-gradient(circle at top, #fff7fb 0, #f9eaf7 40%, #f3d8ef 100%);
     }
 
-    /* ---------- Splash overlay (non-blocking, simple fade) ---------- */
+    /* ---------- Splash overlay (simple fade) ---------- */
     .splash-overlay {
         position: fixed;
         inset: 0;
         width: 100%;
         height: 100%;
-        background: radial-gradient(circle at top, #fff7ee 0, #f4e2cf 45%, #e7d1b9 100%);
+        background: radial-gradient(circle at top, #ffeefa 0, #f4d7f1 45%, #e8c0e5 100%);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -85,7 +85,7 @@ st.markdown(
         font-size: 40px;
         letter-spacing: 0.20em;
         text-transform: uppercase;
-        color: #271910;
+        color: #281322;
         padding: 0 14px;
     }
     .splash-sub {
@@ -93,7 +93,7 @@ st.markdown(
         font-size: 11px;
         letter-spacing: 0.26em;
         text-transform: uppercase;
-        color: #8c6a4e;
+        color: #90506f;
     }
     @keyframes splashFadeOut {
         0%   { opacity: 1; }
@@ -115,13 +115,13 @@ st.markdown(
         font-size: 34px;
         font-weight: 700;
         letter-spacing: 0.09em;
-        color: #271910;
+        color: #281322;
         text-align: center;
         margin-bottom: 0.1rem;
     }
     .hero-sub {
         text-align: center;
-        color: #8b6a4c;
+        color: #996080;
         font-size: 12px;
         letter-spacing: 0.22em;
         text-transform: uppercase;
@@ -140,12 +140,12 @@ st.markdown(
         background: linear-gradient(
             135deg,
             rgba(255,255,255,0.97),
-            rgba(250,242,231,0.99)
+            rgba(252,240,250,0.99)
         );
         border-radius: 22px;
         padding: 18px 22px;
         border: 1px solid rgba(255,255,255,0.9);
-        box-shadow: 0 18px 40px rgba(105,73,46,0.12);
+        box-shadow: 0 18px 40px rgba(91,54,78,0.12);
         backdrop-filter: blur(18px);
         -webkit-backdrop-filter: blur(18px);
         transition: transform 0.18s ease-out,
@@ -158,18 +158,18 @@ st.markdown(
     }
     .premium-card:hover {
         transform: translateY(-4px) scale(1.01);
-        box-shadow: 0 26px 60px rgba(75,50,31,0.22);
-        border-color: #e3c29a;
+        box-shadow: 0 26px 60px rgba(77,38,64,0.22);
+        border-color: #e3b6d8;
         background: linear-gradient(
             140deg,
             rgba(255,255,255,1),
-            rgba(248,238,224,1)
+            rgba(248,233,247,1)
         );
     }
     .card-header-line {
         font-size: 15px;
         font-weight: 600;
-        color: #2d1a10;
+        color: #2b1523;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -179,7 +179,7 @@ st.markdown(
     }
     .card-subtitle {
         font-size: 13px;
-        color: #947359;
+        color: #9f6d8b;
     }
 
     /* Chat card & bubbles */
@@ -187,7 +187,7 @@ st.markdown(
         background: rgba(255,255,255,0.98);
         border-radius: 18px;
         padding: 18px 22px;
-        box-shadow: 0 12px 30px rgba(91,59,42,0.15);
+        box-shadow: 0 12px 30px rgba(92,52,77,0.15);
         max-width: 780px;
         margin: 1.5rem auto;
         backdrop-filter: blur(18px);
@@ -198,16 +198,16 @@ st.markdown(
         padding: 12px 16px;
         border-radius: 14px;
         margin-bottom: 8px;
-        box-shadow: 0 4px 14px rgba(88,57,38,0.10);
-        color: #25170f !important;
+        box-shadow: 0 4px 14px rgba(83,50,68,0.10);
+        color: #251220 !important;
     }
     .user-bubble {
-        background: #f9ebdd;
+        background: #fbe5f3;
         padding: 12px 16px;
         border-radius: 14px;
         margin-bottom: 8px;
         margin-left: 40px;
-        color: #25170f !important;
+        color: #251220 !important;
     }
 
     /* Back button */
@@ -216,58 +216,58 @@ st.markdown(
         margin: 0.6rem auto 0 auto;
     }
     .back-button-container button {
-        background: #f3e4d5 !important;
+        background: #f6e1f0 !important;
         border-radius: 999px !important;
-        border: 1px solid rgba(206,164,116,0.9) !important;
+        border: 1px solid rgba(201,137,179,0.9) !important;
         font-size: 13px;
-        color: #7a5637 !important;
+        color: #844966 !important;
         padding: 4px 16px !important;
-        box-shadow: 0 8px 18px rgba(119,83,52,0.20);
+        box-shadow: 0 8px 18px rgba(120,67,90,0.20);
     }
 
     /* Inputs */
     input, textarea, .stTextInput, .stTextArea {
-        color: #25170f !important;
+        color: #251220 !important;
     }
     .stTextInput > div > div > input,
     .stTextArea > div > textarea {
         background: #ffffff !important;
-        color: #25170f !important;
+        color: #251220 !important;
         border-radius: 14px !important;
-        border: 1px solid #e4c9a6 !important;
+        border: 1px solid #e2bfd7 !important;
     }
     ::placeholder {
-        color: #a17c5a !important;
+        color: #a0698d !important;
         opacity: 1 !important;
     }
     .stTextInput label, .stTextArea label {
-        color: #765337 !important;
+        color: #744261 !important;
     }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# ---------- BUTTON OVERRIDE (so text/icons are visible) ----------
+# ---------- BUTTON OVERRIDE (visible text/icons) ----------
 st.markdown("""
 <style>
 .stButton > button {
-    background-color: #5b3b2a !important;
+    background-color: #6b3b6b !important;  /* mauve */
     color: #ffffff !important;
     border-radius: 16px !important;
     padding: 0.55rem 1.2rem !important;
     font-weight: 600 !important;
     border: none !important;
-    box-shadow: 0 6px 16px rgba(63,38,23,0.35);
+    box-shadow: 0 6px 16px rgba(73,32,73,0.35);
 }
 .stButton > button:hover {
-    background-color: #6e4733 !important;
+    background-color: #7a447b !important;
     color: #ffffff !important;
     transform: translateY(-1px) scale(1.01);
     transition: 0.12s ease-out;
 }
 .stButton > button:disabled {
-    background-color: #8c6a53 !important;
+    background-color: #9a699a !important;
     color: #ffffffa8 !important;
 }
 .stButton svg {
@@ -389,7 +389,7 @@ def analyze_skin_image(image: Image.Image):
         severity = "High redness — consider gentle care and, if painful, in-person dermatologist visit ⚠️"
     return mean_red, severity
 
-# ========== SPLASH (CSS overlay, no blocking) ==========
+# ========== SPLASH OVERLAY (no blocking) ==========
 
 def show_splash_overlay():
     st.markdown(
