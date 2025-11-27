@@ -445,9 +445,8 @@ if "page" in qs:
     st.session_state.page = qs["page"][0]
 
 if not st.session_state.splash_shown and st.session_state.page == "home":
-    render_splash()
     st.session_state.splash_shown = True
-    st.stop()
+   
 
 # ========== SIDEBAR: SKIN PROFILE (Tier-1 Feature) ==========
 with st.sidebar:
