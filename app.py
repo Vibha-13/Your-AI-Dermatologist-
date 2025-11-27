@@ -14,6 +14,43 @@ import requests
 load_dotenv()
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
+# ----------- SAFE NON-BLOCKING SPLASH -----------
+if "show_splash" not in st.session_state:
+    st.session_state.show_splash = True
+
+if st.session_state.show_splash:
+    st.markdown("""
+        <div style="
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at top, #ffeaf6, #f3d4e5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            animation: fadeOut 0.35s ease-out forwards;
+        ">
+            <div style="text-align:center;">
+                <div style="font-size:12px; letter-spacing:0.25em; color:#7a5a71; margin-bottom:6px;">
+                    AI · SKINCARE · DERMATOLOGY
+                </div>
+                <div style="font-size:42px; font-family:'Playfair Display'; color:#251320; letter-spacing:0.17em;">
+                    SKINSYNC
+                </div>
+            </div>
+        </div>
+
+        <style>
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; visibility: hidden; }
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.session_state.show_splash = False
+
 # ========== BASIC CONFIG ==========
 st.set_page_config(
     page_title="SkinSync — AI Dermatologist",
@@ -401,18 +438,7 @@ def analyze_skin_image(image: Image.Image):
 
 # ========== SPLASH (ONCE, NO BLOCKING) ==========
 
-def render_splash():
-    st.markdown(
-        """
-        <div class="splash-wrapper">
-          <div class="splash-inner">
-            <div class="splash-sub">AI · SKINCARE · DERMATOLOGY</div>
-            <div class="splash-title">SKINSYNC</div>
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+
 
 qs = st.experimental_get_query_params()
 if "page" in qs:
