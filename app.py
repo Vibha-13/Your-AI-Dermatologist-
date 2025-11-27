@@ -119,7 +119,7 @@ st.markdown(
         align-items: center;
         justify-content: center;
         z-index: 9999;
-        animation: splashFade 1.3s ease-out forwards;
+        animation: splashFade 3.0 s ease-out forwards;
     }
     .splash-inner {
         text-align: center;
