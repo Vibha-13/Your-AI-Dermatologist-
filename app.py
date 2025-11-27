@@ -14,7 +14,7 @@ import requests
 load_dotenv()
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-# ----------- SAFE NON-BLOCKING SPLASH -----------
+# ----------- SAFE NON-BLOCKING BEAUTIFUL SPLASH -----------
 if "show_splash" not in st.session_state:
     st.session_state.show_splash = True
 
@@ -28,9 +28,11 @@ if st.session_state.show_splash:
             justify-content: center;
             align-items: center;
             z-index: 9999;
-            animation: fadeOut 0.35s ease-out forwards;
+
+            /* 👇 NEW: Delay + duration */
+            animation: fadeOut 1s ease-out 0.8s forwards;
         ">
-            <div style="text-align:center;">
+            <div style="text-align:center; animation: fadeIn 0.6s ease-out forwards;">
                 <div style="font-size:12px; letter-spacing:0.25em; color:#7a5a71; margin-bottom:6px;">
                     AI · SKINCARE · DERMATOLOGY
                 </div>
@@ -41,15 +43,24 @@ if st.session_state.show_splash:
         </div>
 
         <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
         @keyframes fadeOut {
-            0% { opacity: 1; }
-            80% { opacity: 1; }
-            100% { opacity: 0; visibility: hidden; }
+            from { opacity: 1; }
+            to   { opacity: 0; visibility: hidden; }
         }
         </style>
     """, unsafe_allow_html=True)
 
+    # 👇 IMPORTANT: don't hide splash instantly
+    # allow 1.8 sec delay + fade before hiding permanently
+    import time
+    time.sleep(1.8)
     st.session_state.show_splash = False
+
 
 # ========== BASIC CONFIG ==========
 st.set_page_config(
@@ -119,7 +130,7 @@ st.markdown(
         align-items: center;
         justify-content: center;
         z-index: 9999;
-        animation: splashFade 2.3s ease-out forwards;
+        animation: splashFade 0.6s ease-out forwards;
     }
     .splash-inner {
         text-align: center;
