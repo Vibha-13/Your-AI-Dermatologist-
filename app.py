@@ -32,19 +32,10 @@ if st.session_state.show_splash:
         }
         </style>
 
-        <div style="
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(circle at top, #ffeaf6, #f3d4e5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-
-            /* ⭐ Smooth fade-out: lasts 1.2s, starts after 1.8s */
-            animation: fadeOut 1.2s ease-out 1.8s forwards;
-        ">
-            <div style="text-align:center; animation: fadeIn 1s ease-out forwards;">
+        <div style="position:fixed; inset:0; background:radial-gradient(circle at top,#ffeaf6,#f3d4e5);
+                    display:flex; justify-content:center; align-items:center; z-index:9999;
+                    animation:fadeOut 1.2s ease-out 1.8s forwards;">
+            <div style="text-align:center; animation:fadeIn 1s ease-out forwards;">
                 <div style="font-size:12px; letter-spacing:0.25em; color:#7a5a71; margin-bottom:6px;">
                     AI · SKINCARE · DERMATOLOGY
                 </div>
@@ -55,10 +46,10 @@ if st.session_state.show_splash:
         </div>
     """, unsafe_allow_html=True)
 
-    # ⭐ Match the CSS (1.8s delay + 1.2s fade = 3s total)
     import time
     time.sleep(3)
     st.session_state.show_splash = False
+
 
 # ========== BASIC CONFIG ==========
 st.set_page_config(
