@@ -21,61 +21,68 @@ st.set_page_config(
     layout="wide",
 )
 
-# ---------- Force light theme + readable text ----------
+# ---------- Global Light Theme / Text Fix ----------
 st.markdown("""
-<style>
-/* prevent dark-mode madness on mobile */
-:root {
-    color-scheme: light !important;
-}
+    <style>
+    @media (prefers-color-scheme: dark) {
+        html, body, [class*="css"] {
+            color-scheme: light !important;
+        }
+    }
 
-/* top Streamlit header - make it light mauve */
-header[data-testid="stHeader"] {
-    background-color: #fdf3fa !important;
-    color: #3f2337 !important;
-}
-header[data-testid="stHeader"] * {
-    color: #3f2337 !important;
-    fill:  #3f2337 !important;
-}
+    /* GLOBAL TEXT COLOR so nothing is white on pink */
+    html, body, [class*="css"] {
+        color: #2b1826 !important;
+        font-family: 'Inter', sans-serif;
+    }
+    h1, h2, h3, h4, h5 {
+        color: #1f111a !important;
+        font-family: 'Playfair Display', serif !important;
+    }
+    p, span, label, li, td, th, .stMarkdown, .stText {
+        color: #35202b !important;
+    }
 
-/* global text colours for rose/mauve background */
-html, body, [class*="css"] {
-    color: #2e1a24 !important;
-    font-family: 'Inter', sans-serif;
-}
-h1, h2, h3, h4, h5, h6 {
-    color: #1f1117 !important;
-    font-family: 'Playfair Display', serif !important;
-}
-p, span, label, li, td, th {
-    color: #3a2431 !important;
-}
-</style>
+    /* Optional: header bar light */
+    header[data-testid="stHeader"] {
+        background-color: #ffffff !important;
+        color: #2b1826 !important;
+    }
+    header[data-testid="stHeader"] * {
+        color: #2b1826 !important;
+        fill: #2b1826 !important;
+    }
+    </style>
 """, unsafe_allow_html=True)
 
-# ---------- GLOBAL STYLES: light rose + mauve aesthetic ----------
+# ---------- GLOBAL STYLES (ROSY AESTHETIC + SPLASH) ----------
 st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
     .stApp {
-        background: radial-gradient(circle at top, #fff7fb 0, #f9eaf7 40%, #f3d8ef 100%);
+        background: linear-gradient(
+            180deg,
+            #fffdfd 0%,
+            #fff7fb 30%,
+            #feeef7 65%,
+            #fbe5f1 100%
+        );
     }
 
-    /* ---------- Splash overlay (simple fade) ---------- */
-    .splash-overlay {
+    /* Splash screen (simple fade logo) */
+    .splash-wrapper {
         position: fixed;
         inset: 0;
         width: 100%;
         height: 100%;
-        background: radial-gradient(circle at top, #ffeefa 0, #f4d7f1 45%, #e8c0e5 100%);
+        background: radial-gradient(circle at top, #ffeaf6 0, #f6ddea 40%, #f1cfe3 100%);
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 9999;
-        animation: splashFadeOut 1.4s ease-out forwards;
+        animation: splashFade 0.9s ease-out forwards;
     }
     .splash-inner {
         text-align: center;
@@ -83,27 +90,26 @@ st.markdown(
     .splash-title {
         font-family: 'Playfair Display', serif;
         font-size: 40px;
-        letter-spacing: 0.20em;
+        letter-spacing: 0.18em;
         text-transform: uppercase;
-        color: #281322;
-        padding: 0 14px;
+        color: #251320;
+        padding: 0 10px;
     }
     .splash-sub {
-        margin-bottom: 0.6rem;
+        margin-bottom: 0.8rem;
         font-size: 11px;
-        letter-spacing: 0.26em;
+        letter-spacing: 0.28em;
         text-transform: uppercase;
-        color: #90506f;
+        color: #7a5a71;
     }
-    @keyframes splashFadeOut {
-        0%   { opacity: 1; }
-        70%  { opacity: 1; }
-        100% { opacity: 0; visibility: hidden; pointer-events: none; }
+    @keyframes splashFade {
+        from { opacity: 0; }
+        to   { opacity: 1; }
     }
 
-    /* page section fade */
+    /* Page fade-in */
     .page-container {
-        animation: fadeInUp 0.30s ease-out;
+        animation: fadeInUp 0.3s ease-out;
     }
     @keyframes fadeInUp {
         from { opacity: 0; transform: translateY(8px); }
@@ -114,14 +120,14 @@ st.markdown(
     .hero-title {
         font-size: 34px;
         font-weight: 700;
-        letter-spacing: 0.09em;
-        color: #281322;
+        letter-spacing: 0.07em;
+        color: #251320;
         text-align: center;
         margin-bottom: 0.1rem;
     }
     .hero-sub {
         text-align: center;
-        color: #996080;
+        color: #8a6a7f;
         font-size: 12px;
         letter-spacing: 0.22em;
         text-transform: uppercase;
@@ -130,7 +136,7 @@ st.markdown(
     /* Feature grid & cards */
     .feature-grid {
         max-width: 900px;
-        margin: 2.2rem auto 1.6rem auto;
+        margin: 2.3rem auto 1.6rem auto;
     }
     .card-link {
         text-decoration: none;
@@ -139,15 +145,15 @@ st.markdown(
     .premium-card {
         background: linear-gradient(
             135deg,
-            rgba(255,255,255,0.97),
-            rgba(252,240,250,0.99)
+            rgba(255,255,255,0.98),
+            rgba(255,246,252,0.99)
         );
         border-radius: 22px;
         padding: 18px 22px;
         border: 1px solid rgba(255,255,255,0.9);
-        box-shadow: 0 18px 40px rgba(91,54,78,0.12);
-        backdrop-filter: blur(18px);
-        -webkit-backdrop-filter: blur(18px);
+        box-shadow: 0 18px 40px rgba(0,0,0,0.08);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
         transition: transform 0.18s ease-out,
                     box-shadow 0.18s ease-out,
                     border-color 0.18s ease-out,
@@ -158,18 +164,18 @@ st.markdown(
     }
     .premium-card:hover {
         transform: translateY(-4px) scale(1.01);
-        box-shadow: 0 26px 60px rgba(77,38,64,0.22);
-        border-color: #e3b6d8;
+        box-shadow: 0 26px 60px rgba(0,0,0,0.18);
+        border-color: #f1b9d3;
         background: linear-gradient(
             140deg,
             rgba(255,255,255,1),
-            rgba(248,233,247,1)
+            rgba(255,242,249,1)
         );
     }
     .card-header-line {
         font-size: 15px;
         font-weight: 600;
-        color: #2b1523;
+        color: #2f1a29;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -179,7 +185,7 @@ st.markdown(
     }
     .card-subtitle {
         font-size: 13px;
-        color: #9f6d8b;
+        color: #8b6c80;
     }
 
     /* Chat card & bubbles */
@@ -187,7 +193,7 @@ st.markdown(
         background: rgba(255,255,255,0.98);
         border-radius: 18px;
         padding: 18px 22px;
-        box-shadow: 0 12px 30px rgba(92,52,77,0.15);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.07);
         max-width: 780px;
         margin: 1.5rem auto;
         backdrop-filter: blur(18px);
@@ -198,16 +204,16 @@ st.markdown(
         padding: 12px 16px;
         border-radius: 14px;
         margin-bottom: 8px;
-        box-shadow: 0 4px 14px rgba(83,50,68,0.10);
-        color: #251220 !important;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+        color: #251320 !important;
     }
     .user-bubble {
-        background: #fbe5f3;
+        background: #fbe3f4;
         padding: 12px 16px;
         border-radius: 14px;
         margin-bottom: 8px;
         margin-left: 40px;
-        color: #251220 !important;
+        color: #251320 !important;
     }
 
     /* Back button */
@@ -216,68 +222,52 @@ st.markdown(
         margin: 0.6rem auto 0 auto;
     }
     .back-button-container button {
-        background: #f6e1f0 !important;
+        background: #ffffff !important;
         border-radius: 999px !important;
-        border: 1px solid rgba(201,137,179,0.9) !important;
+        border: 1px solid rgba(222,174,203,0.9) !important;
         font-size: 13px;
-        color: #844966 !important;
+        color: #7f556f !important;
         padding: 4px 16px !important;
-        box-shadow: 0 8px 18px rgba(120,67,90,0.20);
+        box-shadow: 0 8px 18px rgba(0,0,0,0.06);
     }
 
-    /* Inputs */
+    /* Inputs & buttons */
     input, textarea, .stTextInput, .stTextArea {
-        color: #251220 !important;
+        color: #251320 !important;
     }
     .stTextInput > div > div > input,
     .stTextArea > div > textarea {
         background: #ffffff !important;
-        color: #251220 !important;
+        color: #251320 !important;
         border-radius: 14px !important;
-        border: 1px solid #e2bfd7 !important;
+        border: 1px solid #edd3e4 !important;
     }
     ::placeholder {
-        color: #a0698d !important;
+        color: #a27d98 !important;
         opacity: 1 !important;
     }
     .stTextInput label, .stTextArea label {
-        color: #744261 !important;
+        color: #5c3b52 !important;
+    }
+
+    .stButton > button {
+        background: #251320 !important;
+        color: #ffffff !important;
+        border-radius: 999px !important;
+        border: none !important;
+        padding: 0.4rem 1.2rem !important;
+        font-size: 14px !important;
+        box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+    }
+    .stButton > button:hover {
+        background: #3a2033 !important;
     }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# ---------- BUTTON OVERRIDE (visible text/icons) ----------
-st.markdown("""
-<style>
-.stButton > button {
-    background-color: #6b3b6b !important;  /* mauve */
-    color: #ffffff !important;
-    border-radius: 16px !important;
-    padding: 0.55rem 1.2rem !important;
-    font-weight: 600 !important;
-    border: none !important;
-    box-shadow: 0 6px 16px rgba(73,32,73,0.35);
-}
-.stButton > button:hover {
-    background-color: #7a447b !important;
-    color: #ffffff !important;
-    transform: translateY(-1px) scale(1.01);
-    transition: 0.12s ease-out;
-}
-.stButton > button:disabled {
-    background-color: #9a699a !important;
-    color: #ffffffa8 !important;
-}
-.stButton svg {
-    fill: #ffffff !important;
-    stroke: #ffffff !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ========== DATABASE ==========
+# ========== DB SETUP ==========
 DB_PATH = "skinsync.db"
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 c = conn.cursor()
@@ -315,6 +305,15 @@ if "page" not in st.session_state:
     st.session_state.page = "home"
 if "splash_shown" not in st.session_state:
     st.session_state.splash_shown = False
+if "profile" not in st.session_state:
+    st.session_state.profile = {
+        "name": "",
+        "age_bucket": "18–24",
+        "skin_type": "Combination",
+        "main_concern": "Acne / Breakouts",
+        "sensitivity": "Normal",
+        "location": "",
+    }
 
 # ========== HELPERS ==========
 
@@ -333,8 +332,18 @@ def detect_severe_keywords(text: str) -> bool:
 def append_message(role: str, text: str):
     st.session_state.messages.append({"role": role, "text": text})
 
-SYSTEM_PROMPT = """
+def build_system_prompt():
+    p = st.session_state.profile
+    return f"""
 You are SkinSync, a friendly but responsible AI dermatology assistant.
+
+User profile:
+- Name: {p.get('name') or 'User'}
+- Age range: {p.get('age_bucket')}
+- Skin type: {p.get('skin_type')}
+- Main concern: {p.get('main_concern')}
+- Sensitivity: {p.get('sensitivity')}
+- Location (approx): {p.get('location') or 'not specified'}
 
 Your goals:
 - Ask gentle follow-up questions about the user's skin, lifestyle and routine.
@@ -349,6 +358,7 @@ Your goals:
 def call_openrouter_chat(messages):
     if not OPENROUTER_API_KEY:
         return None, "No OPENROUTER_API_KEY found in environment."
+
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -389,12 +399,12 @@ def analyze_skin_image(image: Image.Image):
         severity = "High redness — consider gentle care and, if painful, in-person dermatologist visit ⚠️"
     return mean_red, severity
 
-# ========== SPLASH OVERLAY (no blocking) ==========
+# ========== SPLASH (ONCE, NO BLOCKING) ==========
 
-def show_splash_overlay():
+def render_splash():
     st.markdown(
         """
-        <div class="splash-overlay">
+        <div class="splash-wrapper">
           <div class="splash-inner">
             <div class="splash-sub">AI · SKINCARE · DERMATOLOGY</div>
             <div class="splash-title">SKINSYNC</div>
@@ -404,18 +414,58 @@ def show_splash_overlay():
         unsafe_allow_html=True,
     )
 
-# Read query param first so we know where we are
 qs = st.experimental_get_query_params()
 if "page" in qs:
     st.session_state.page = qs["page"][0]
 
-# Show overlay once at session start on home
 if not st.session_state.splash_shown and st.session_state.page == "home":
-    show_splash_overlay()
+    render_splash()
     st.session_state.splash_shown = True
+    st.stop()
+
+# ========== SIDEBAR: SKIN PROFILE (Tier-1 Feature) ==========
+with st.sidebar:
+    st.markdown("#### 🌸 Your Skin Profile")
+    p = st.session_state.profile
+    p["name"] = st.text_input("Name (optional)", value=p["name"])
+    p["age_bucket"] = st.selectbox(
+        "Age range",
+        ["<18", "18–24", "25–30", "30–40", "40+"],
+        index=["<18", "18–24", "25–30", "30–40", "40+"].index(p["age_bucket"]),
+    )
+    p["skin_type"] = st.selectbox(
+        "Skin type",
+        ["Dry", "Oily", "Combination", "Normal", "Sensitive"],
+        index=["Dry", "Oily", "Combination", "Normal", "Sensitive"].index(p["skin_type"]),
+    )
+    p["main_concern"] = st.selectbox(
+        "Main concern",
+        [
+            "Acne / Breakouts",
+            "Pigmentation / Dark spots",
+            "Dryness / Flakiness",
+            "Oiliness / Shine",
+            "Redness / Sensitivity",
+            "Anti-aging / Fine lines",
+        ],
+        index=0 if p["main_concern"] == "" else [
+            "Acne / Breakouts",
+            "Pigmentation / Dark spots",
+            "Dryness / Flakiness",
+            "Oiliness / Shine",
+            "Redness / Sensitivity",
+            "Anti-aging / Fine lines",
+        ].index(p["main_concern"]),
+    )
+    p["sensitivity"] = st.selectbox(
+        "Sensitivity",
+        ["Normal", "Slightly sensitive", "Very sensitive"],
+        index=["Normal", "Slightly sensitive", "Very sensitive"].index(p["sensitivity"]),
+    )
+    p["location"] = st.text_input("Location (city, optional)", value=p["location"])
+    st.session_state.profile = p
 
 # ========== LAYOUT HELPERS ==========
-
 def render_back_to_home():
     with st.container():
         st.markdown('<div class="back-button-container page-container">', unsafe_allow_html=True)
@@ -434,6 +484,15 @@ def render_home():
         "<p style='text-align:center;font-size:14px;margin-top:-4px;'>"
         "Your AI-powered skincare companion for gentle, science-based routines."
         "</p>",
+        unsafe_allow_html=True,
+    )
+
+    # Small profile chip
+    prof = st.session_state.profile
+    st.markdown(
+        f"<p style='text-align:center;font-size:12px;margin-top:4px;opacity:0.8;'>"
+        f"Signed in as <strong>{prof.get('name') or 'Guest'}</strong> · "
+        f"{prof.get('skin_type')} skin · {prof.get('main_concern')}</p>",
         unsafe_allow_html=True,
     )
 
@@ -521,6 +580,15 @@ def render_chat():
     st.markdown('<div class="page-container">', unsafe_allow_html=True)
     st.markdown("### 🩺 AI Derm Chat", unsafe_allow_html=True)
 
+    # Small profile summary at top of chat
+    prof = st.session_state.profile
+    st.markdown(
+        f"<p style='font-size:12px;opacity:0.8;'>"
+        f"Profile: <strong>{prof.get('skin_type')}</strong> skin · "
+        f"{prof.get('main_concern')} · sensitivity: {prof.get('sensitivity')}</p>",
+        unsafe_allow_html=True,
+    )
+
     with st.container():
         st.markdown('<div class="chat-card">', unsafe_allow_html=True)
 
@@ -545,10 +613,10 @@ def render_chat():
                 )
 
         user_input = st.text_input("You:", key="chat_input")
-        col_left, col_right = st.columns([1, 1])
-        with col_left:
+        cols = st.columns([1, 1])
+        with cols[0]:
             send_clicked = st.button("Send", key="chat_send")
-        with col_right:
+        with cols[1]:
             save_clicked = st.button("💾 Save consult", key="save_consult")
 
         if send_clicked:
@@ -557,9 +625,9 @@ def render_chat():
             else:
                 append_message("user", user_input)
 
-                or_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+                messages = [{"role": "system", "content": build_system_prompt()}]
                 for m in st.session_state.messages:
-                    or_messages.append({"role": m["role"], "content": m["text"]})
+                    messages.append({"role": m["role"], "content": m["text"]})
 
                 if detect_severe_keywords(user_input):
                     warn = (
@@ -568,9 +636,9 @@ def render_chat():
                         "but please consider seeing an in-person dermatologist soon. 🧑‍⚕️"
                     )
                     append_message("assistant", warn)
-                    or_messages.append({"role": "assistant", "content": warn})
+                    messages.append({"role": "assistant", "content": warn})
 
-                reply_text, err = call_openrouter_chat(or_messages)
+                reply_text, err = call_openrouter_chat(messages)
                 if err:
                     fallback = (
                         "I couldn't contact the AI engine right now, but based on what you said "
@@ -584,11 +652,21 @@ def render_chat():
                     append_message("assistant", reply_text)
                     st.session_state.last_plan = reply_text
 
+        # Tier-1: Download routine button
+        if st.session_state.last_plan:
+            st.download_button(
+                "⬇️ Download routine (.txt)",
+                data=st.session_state.last_plan,
+                file_name="skinsync_routine.txt",
+                mime="text/plain",
+            )
+
         if save_clicked:
             if st.session_state.last_plan is None:
                 st.warning("No consult to save yet — send a message and get at least one AI reply first 🧾")
             else:
                 payload = {
+                    "profile": st.session_state.profile,
                     "conversation": st.session_state.messages,
                     "last_plan": st.session_state.last_plan,
                 }
@@ -641,7 +719,7 @@ def render_scan():
 - Converts the image to RGB, then computes a **redness index** per pixel.  
 - Normalises the value to a 0–1 range and takes the mean.  
 - Maps the mean redness value to **mild / moderate / high** categories.  
-- Shows understanding of basic computer vision & image preprocessing.  
+- Shows understanding of image preprocessing, colour channels and basic CV feature engineering.  
             """
         )
     st.markdown("</div>", unsafe_allow_html=True)
@@ -660,18 +738,35 @@ def render_history():
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    def preview(row):
+    # Show table
+    st.dataframe(df[["id", "session_id", "created_at"]], use_container_width=True)
+
+    # Tier-1: Detail viewer
+    ids = df["id"].tolist()
+    selected_id = st.selectbox("View full consult by ID", ids)
+    if selected_id:
+        row = df[df["id"] == selected_id].iloc[0]
         try:
             data = json.loads(row["data"])
+            prof = data.get("profile", {})
             convo = data.get("conversation", [])
-            first_user = next((m["text"] for m in convo if m["role"] == "user"), "")
             last_plan = data.get("last_plan", "")
-            return f"User: {first_user[:40]}... | Plan: {last_plan[:40]}..."
-        except Exception:
-            return row["data"][:80]
 
-    df["summary"] = df.apply(preview, axis=1)
-    st.dataframe(df[["id", "summary", "created_at"]], use_container_width=True)
+            first_user = next((m["text"] for m in convo if m["role"] == "user"), "")
+
+            st.markdown("#### 🧑‍⚕️ Snapshot")
+            st.write(f"**User:** {prof.get('name') or 'Unknown'}")
+            st.write(f"**Skin type:** {prof.get('skin_type')} · **Concern:** {prof.get('main_concern')}")
+            st.write(f"**Created at:** {row['created_at']}")
+
+            st.markdown("#### 💬 First message")
+            st.write(first_user or "_(empty)_")
+
+            st.markdown("#### 🧴 Saved routine / plan")
+            st.write(last_plan or "_No plan stored._")
+        except Exception:
+            st.write(row["data"][:500])
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 def render_appointments():
@@ -721,7 +816,6 @@ def render_appointments():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ========== ROUTING ==========
-
 page = st.session_state.page
 
 if page == "home":
