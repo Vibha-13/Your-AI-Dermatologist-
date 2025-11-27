@@ -401,23 +401,46 @@ def call_openrouter_chat(messages):
         return None, f"Error calling OpenRouter: {e}"
 
 def analyze_skin_image(image: Image.Image):
-    img = image.convert("RGB")
-    arr = np.array(img).astype("float32")
-    r = arr[:, :, 0]
-    g = arr[:, :, 1]
-    b = arr[:, :, 2]
-    redness = r - (g + b) / 2
-    redness_normalized = (redness - redness.min()) / (redness.ptp() + 1e-6)
-    mean_red = float(redness_normalized.mean())
-    if mean_red < 0.25:
-        severity = "Very mild / almost no visible redness 🙂"
-    elif mean_red < 0.45:
-        severity = "Mild redness — could be light irritation or occasional acne 🌸"
-    elif mean_red < 0.65:
-        severity = "Moderate redness — noticeable inflammation, monitor products used 🔎"
-    else:
-        severity = "High redness — consider gentle care and, if painful, in-person dermatologist visit ⚠️"
-    return mean_red, severity
+    try:
+        img = image.convert("RGB")
+        arr = np.array(img).astype("float32")
+
+        # basic shape check
+        if len(arr.shape) != 3 or arr.shape[2] != 3:
+            return 0.0, "Invalid image format — please upload a clear color photo."
+
+        r = arr[:, :, 0]
+        g = arr[:, :, 1]
+        b = arr[:, :, 2]
+
+        redness = r - (g + b) / 2
+
+        # if the image is uniform (no variation)
+        if np.all(redness == redness.flat[0]):
+            return 0.0, "Image has no detectable color variation — try a clearer face photo."
+
+        # safe range calculation
+        diff = redness.max() - redness.min()
+        if diff < 1e-6:
+            diff = 1e-6  # avoid division by zero
+
+        redness_normalized = (redness - redness.min()) / diff
+        mean_red = float(np.mean(redness_normalized))
+
+        if mean_red < 0.25:
+            severity = "Very mild / almost no visible redness 🙂"
+        elif mean_red < 0.45:
+            severity = "Mild redness — could be light irritation or occasional acne 🌸"
+        elif mean_red < 0.65:
+            severity = "Moderate redness — noticeable inflammation 🔎"
+        else:
+            severity = "High redness — consider gentle care and maybe seeing a dermatologist if painful ⚠️"
+
+        return mean_red, severity
+
+    except Exception:
+        return 0.0, "Unable to analyze this image — please upload a clearer photo."
+
 
 # ========== SIDEBAR: SKIN PROFILE (Tier-1) ==========
 with st.sidebar:
