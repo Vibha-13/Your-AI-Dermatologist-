@@ -32,10 +32,19 @@ if st.session_state.show_splash:
         }
         </style>
 
-        <div style="position:fixed; inset:0; background:radial-gradient(circle at top,#ffeaf6,#f3d4e5);
-                    display:flex; justify-content:center; align-items:center; z-index:9999;
-                    animation:fadeOut 1.2s ease-out 1.8s forwards;">
-            <div style="text-align:center; animation:fadeIn 1s ease-out forwards;">
+        <div style="
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at top, #ffeaf6, #f3d4e5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+
+            /* ⭐ Smooth fade-out: lasts 1.2s, starts after 1.8s */
+            animation: fadeOut 1.2s ease-out 1.8s forwards;
+        ">
+            <div style="text-align:center; animation: fadeIn 1s ease-out forwards;">
                 <div style="font-size:12px; letter-spacing:0.25em; color:#7a5a71; margin-bottom:6px;">
                     AI · SKINCARE · DERMATOLOGY
                 </div>
@@ -46,10 +55,10 @@ if st.session_state.show_splash:
         </div>
     """, unsafe_allow_html=True)
 
+    # Match the CSS (1.8s delay + 1.2s fade = ~3s total)
     import time
     time.sleep(3)
     st.session_state.show_splash = False
-
 
 # ========== BASIC CONFIG ==========
 st.set_page_config(
@@ -80,7 +89,7 @@ st.markdown("""
         color: #35202b !important;
     }
 
-    /* Optional: header bar light */
+    /* Header bar light */
     header[data-testid="stHeader"] {
         background-color: #ffffff !important;
         color: #2b1826 !important;
@@ -92,7 +101,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ---------- GLOBAL STYLES (ROSY AESTHETIC + SPLASH) ----------
+# ---------- GLOBAL STYLES (ROSY AESTHETIC) ----------
 st.markdown(
     """
     <style>
@@ -106,42 +115,6 @@ st.markdown(
             #feeef7 65%,
             #fbe5f1 100%
         );
-    }
-
-    /* Splash screen (simple fade logo) */
-    .splash-wrapper {
-        position: fixed;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(circle at top, #ffeaf6 0, #f6ddea 40%, #f1cfe3 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        animation: splashFade 0.6s ease-out forwards;
-    }
-    .splash-inner {
-        text-align: center;
-    }
-    .splash-title {
-        font-family: 'Playfair Display', serif;
-        font-size: 40px;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-        color: #251320;
-        padding: 0 10px;
-    }
-    .splash-sub {
-        margin-bottom: 0.8rem;
-        font-size: 11px;
-        letter-spacing: 0.28em;
-        text-transform: uppercase;
-        color: #7a5a71;
-    }
-    @keyframes splashFade {
-        from { opacity: 0; }
-        to   { opacity: 1; }
     }
 
     /* Page fade-in */
@@ -340,8 +313,6 @@ if "last_plan" not in st.session_state:
     st.session_state.last_plan = None
 if "page" not in st.session_state:
     st.session_state.page = "home"
-if "splash_shown" not in st.session_state:
-    st.session_state.splash_shown = False
 if "profile" not in st.session_state:
     st.session_state.profile = {
         "name": "",
@@ -351,6 +322,11 @@ if "profile" not in st.session_state:
         "sensitivity": "Normal",
         "location": "",
     }
+
+# ---------- ROUTING FROM QUERY PARAMS ----------
+qs = st.experimental_get_query_params()
+if "page" in qs:
+    st.session_state.page = qs["page"][0]
 
 # ========== HELPERS ==========
 
@@ -390,6 +366,13 @@ Your goals:
 - Be warm, supportive, and concise. Use bullet points and headings where helpful.
 - Assume user is in India/Asia unless specified; mention if actives may be irritating or need sunscreen.
 - Never guarantee cures or medical outcomes.
+- Try to structure your final answer like:
+
+  1. Short summary of main issues
+  2. 🌞 Morning routine (stepwise)
+  3. 🌙 Night routine (stepwise)
+  4. 🧴 1–2 DIY / home-care packs (with frequency)
+  5. ⚠️ Caution / when to see a dermatologist
 """
 
 def call_openrouter_chat(messages):
@@ -436,19 +419,7 @@ def analyze_skin_image(image: Image.Image):
         severity = "High redness — consider gentle care and, if painful, in-person dermatologist visit ⚠️"
     return mean_red, severity
 
-# ========== SPLASH (ONCE, NO BLOCKING) ==========
-
-
-
-qs = st.experimental_get_query_params()
-if "page" in qs:
-    st.session_state.page = qs["page"][0]
-
-if not st.session_state.splash_shown and st.session_state.page == "home":
-    st.session_state.splash_shown = True
-   
-
-# ========== SIDEBAR: SKIN PROFILE (Tier-1 Feature) ==========
+# ========== SIDEBAR: SKIN PROFILE (Tier-1) ==========
 with st.sidebar:
     st.markdown("#### 🌸 Your Skin Profile")
     p = st.session_state.profile
@@ -463,24 +434,20 @@ with st.sidebar:
         ["Dry", "Oily", "Combination", "Normal", "Sensitive"],
         index=["Dry", "Oily", "Combination", "Normal", "Sensitive"].index(p["skin_type"]),
     )
+    concerns_list = [
+        "Acne / Breakouts",
+        "Pigmentation / Dark spots",
+        "Dryness / Flakiness",
+        "Oiliness / Shine",
+        "Redness / Sensitivity",
+        "Anti-aging / Fine lines",
+    ]
+    if p["main_concern"] not in concerns_list:
+        p["main_concern"] = concerns_list[0]
     p["main_concern"] = st.selectbox(
         "Main concern",
-        [
-            "Acne / Breakouts",
-            "Pigmentation / Dark spots",
-            "Dryness / Flakiness",
-            "Oiliness / Shine",
-            "Redness / Sensitivity",
-            "Anti-aging / Fine lines",
-        ],
-        index=0 if p["main_concern"] == "" else [
-            "Acne / Breakouts",
-            "Pigmentation / Dark spots",
-            "Dryness / Flakiness",
-            "Oiliness / Shine",
-            "Redness / Sensitivity",
-            "Anti-aging / Fine lines",
-        ].index(p["main_concern"]),
+        concerns_list,
+        index=concerns_list.index(p["main_concern"]),
     )
     p["sensitivity"] = st.selectbox(
         "Sensitivity",
@@ -512,7 +479,6 @@ def render_home():
         unsafe_allow_html=True,
     )
 
-    # Small profile chip
     prof = st.session_state.profile
     st.markdown(
         f"<p style='text-align:center;font-size:12px;margin-top:4px;opacity:0.8;'>"
@@ -605,7 +571,6 @@ def render_chat():
     st.markdown('<div class="page-container">', unsafe_allow_html=True)
     st.markdown("### 🩺 AI Derm Chat", unsafe_allow_html=True)
 
-    # Small profile summary at top of chat
     prof = st.session_state.profile
     st.markdown(
         f"<p style='font-size:12px;opacity:0.8;'>"
@@ -686,6 +651,10 @@ def render_chat():
                 mime="text/plain",
             )
 
+            # Tier-2: Routine snapshot section
+            with st.expander("📌 View latest routine snapshot"):
+                st.markdown(st.session_state.last_plan)
+
         if save_clicked:
             if st.session_state.last_plan is None:
                 st.warning("No consult to save yet — send a message and get at least one AI reply first 🧾")
@@ -755,7 +724,7 @@ def render_history():
     st.markdown("### 📋 Consult History")
 
     df = pd.read_sql_query(
-        "SELECT id, session_id, data, created_at FROM consults ORDER BY id DESC LIMIT 50",
+        "SELECT id, session_id, data, created_at FROM consults ORDER BY id DESC LIMIT 100",
         conn,
     )
     if df.empty:
@@ -763,11 +732,45 @@ def render_history():
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    # Show table
-    st.dataframe(df[["id", "session_id", "created_at"]], use_container_width=True)
+    # ---- Tier-2: derive skin_type & concern from stored profile for filtering ----
+    skin_types = []
+    concerns = []
 
-    # Tier-1: Detail viewer
-    ids = df["id"].tolist()
+    for _, row in df.iterrows():
+        try:
+            data = json.loads(row["data"])
+            prof = data.get("profile", {})
+            skin_types.append(prof.get("skin_type", "Unknown"))
+            concerns.append(prof.get("main_concern", "Unknown"))
+        except Exception:
+            skin_types.append("Unknown")
+            concerns.append("Unknown")
+
+    df["skin_type"] = skin_types
+    df["main_concern"] = concerns
+
+    unique_skin = ["(all)"] + sorted(set(skin_types))
+    unique_concern = ["(all)"] + sorted(set(concerns))
+
+    colf1, colf2 = st.columns(2)
+    with colf1:
+        filter_skin = st.selectbox("Filter by skin type", unique_skin)
+    with colf2:
+        filter_concern = st.selectbox("Filter by concern", unique_concern)
+
+    filtered = df.copy()
+    if filter_skin != "(all)":
+        filtered = filtered[filtered["skin_type"] == filter_skin]
+    if filter_concern != "(all)":
+        filtered = filtered[filtered["main_concern"] == filter_concern]
+
+    st.markdown("#### Saved consults")
+    st.dataframe(
+        filtered[["id", "skin_type", "main_concern", "created_at"]],
+        use_container_width=True,
+    )
+
+    ids = filtered["id"].tolist()
     selected_id = st.selectbox("View full consult by ID", ids)
     if selected_id:
         row = df[df["id"] == selected_id].iloc[0]
