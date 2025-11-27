@@ -20,6 +20,18 @@ if "show_splash" not in st.session_state:
 
 if st.session_state.show_splash:
     st.markdown("""
+        <style>
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; visibility: hidden; }
+        }
+        </style>
+
         <div style="
             position: fixed;
             inset: 0;
@@ -29,10 +41,10 @@ if st.session_state.show_splash:
             align-items: center;
             z-index: 9999;
 
-            /* 👇 NEW: Delay + duration */
-            animation: fadeOut 1s ease-out 0.8s forwards;
+            /* ⭐ Smooth fade-out: lasts 1.2s, starts after 1.8s */
+            animation: fadeOut 1.2s ease-out 1.8s forwards;
         ">
-            <div style="text-align:center; animation: fadeIn 0.6s ease-out forwards;">
+            <div style="text-align:center; animation: fadeIn 1s ease-out forwards;">
                 <div style="font-size:12px; letter-spacing:0.25em; color:#7a5a71; margin-bottom:6px;">
                     AI · SKINCARE · DERMATOLOGY
                 </div>
@@ -41,26 +53,12 @@ if st.session_state.show_splash:
                 </div>
             </div>
         </div>
-
-        <style>
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to   { opacity: 0; visibility: hidden; }
-        }
-        </style>
     """, unsafe_allow_html=True)
 
-    # 👇 IMPORTANT: don't hide splash instantly
-    # allow 1.8 sec delay + fade before hiding permanently
+    # ⭐ Match the CSS (1.8s delay + 1.2s fade = 3s total)
     import time
-    time.sleep(1.8)
+    time.sleep(3)
     st.session_state.show_splash = False
-
 
 # ========== BASIC CONFIG ==========
 st.set_page_config(
