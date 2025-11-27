@@ -680,43 +680,58 @@ def render_chat():
 
 def render_scan():
     render_back_to_home()
+
+    # Start page container
     st.markdown('<div class="page-container">', unsafe_allow_html=True)
     st.markdown("### 📷 Skin Image Analysis")
 
     col1, col2 = st.columns([1.2, 1])
 
+    # -------- LEFT SIDE: Image Upload + Analysis --------
     with col1:
         uploaded = st.file_uploader(
             "Upload a clear face photo (front-facing, good lighting)",
             type=["png", "jpg", "jpeg"],
         )
-        if uploaded is not None:
-            image = Image.open(BytesIO(uploaded.read()))
+
+        if uploaded:
+            # Load image safely
+            img_bytes = uploaded.read()
+            image = Image.open(BytesIO(img_bytes))
             st.image(image, caption="Uploaded image", use_column_width=True)
 
+            # Analyze button
             if st.button("Analyze redness & inflammation"):
                 mean_red, severity = analyze_skin_image(image)
                 st.markdown("#### 🔎 Analysis result")
-                st.write(f"**Redness score (0 to 1):** {mean_red:.2f}")
+                st.write(f"**Redness score (0–1):** `{mean_red:.2f}`")
                 st.write(f"**Severity:** {severity}")
                 st.info(
                     "This is a heuristic, educational-only analysis. "
-                    "Real diagnosis always needs an in-person dermatologist."
+                    "Real diagnosis always requires a professional dermatologist."
                 )
         else:
-            st.info("No image uploaded yet — upload a face photo to start analysis.")
+            st.info("No image uploaded — please upload a face photo to start analysis.")
 
+    # -------- RIGHT SIDE: Explanation --------
     with col2:
         st.markdown("#### How this works (for your resume)")
         st.markdown(
             """
-- Converts the image to RGB, then computes a **redness index** per pixel.  
-- Normalises the value to a 0–1 range and takes the mean.  
-- Maps the mean redness value to **mild / moderate / high** categories.  
-- Shows understanding of image preprocessing, colour channels and basic CV feature engineering.  
+- Converts image to RGB  
+- Computes a **redness index** (R - (G+B)/2)  
+- Normalizes it between 0–1  
+- Averages all pixels  
+- Maps to **mild / moderate / high** categories  
+
+This demonstrates computer-vision feature engineering:  
+colour channels, normalization, and severity mapping.
             """
         )
+
+    # Close container
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 def render_history():
     render_back_to_home()
