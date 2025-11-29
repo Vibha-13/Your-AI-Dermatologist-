@@ -6,7 +6,7 @@ from helpers import analyze_skin_image, go_to
 with open("style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-def render_scan():
+def scan_page():
     if st.button("← Back"):
         go_to(st, "home")
 

@@ -9,7 +9,7 @@ from helpers import (
 )
 from config import c, conn
 
-def render_chat():
+def chat_page():
     if st.button("← Back"):
         go_to(st, "home")
 

@@ -7,7 +7,7 @@ with open("style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 
-def render_appointments():
+def appointments_page():
     if st.button("← Back"):
         go_to(st, "home")
 
