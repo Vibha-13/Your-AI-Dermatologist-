@@ -24,7 +24,7 @@ except:
 # FLOATING PARTICLES (Layer 4)
 # ----------------------------
 particle_html = ""
-for i in range(5):
+for i in range(3):
     particle_html += (
         f"<div class='particle' style='top:{10+i*20}%; "
         f"left:{15+i*12}%; animation-delay:{i*1.2}s;'></div>"
