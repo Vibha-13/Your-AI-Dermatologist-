@@ -6,6 +6,10 @@ from pages.scan import render_scan
 from pages.history import render_history
 from pages.appointments import render_appointments
 
+# ========== LOAD GLOBAL CSS ==========
+with open("style.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
 # ----------------------------
 # PAGE CONFIG
 # ----------------------------
