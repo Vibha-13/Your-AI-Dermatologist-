@@ -90,9 +90,9 @@ header[data-testid="stHeader"] * {
     margin: 18px auto;
     box-shadow:
         0 0 30px rgba(255,130,190,0.65),
-        0 0 50px rgba(255,170,210,0.45),
+        0 0 38px rgba(255,170,210,0.40),
         inset 0 0 30px rgba(255,255,255,0.5);
-    animation: orbfloat 5s ease-in-out infinite alternate;
+    animation: orbfloat 7s ease-in-out infinite alternate;
     transition: transform 0.25s ease, box-shadow 0.25s ease;
     cursor: pointer;
 }
@@ -150,12 +150,12 @@ header[data-testid="stHeader"] * {
     position: fixed;
     top: -20%;
     left: -20%;
-    width: 160%;
-    height: 160%;
+    width: 130%;
+    height: 130%;
     background: radial-gradient(circle at center, #ffe0f1 0%, #ffd2eb 40%, transparent 70%);
     z-index: -5;
     animation: bgfloat 14s ease-in-out infinite alternate;
-    filter: blur(70px);
+    filter: blur(45px);
 }
 
 @keyframes bgfloat {
@@ -237,6 +237,7 @@ header[data-testid="stHeader"] * {
 }
 
 /* Smooth transitions for all */
-* {
+button, .premium-card, .tilt-card, .derm-orb {
     transition: all 0.20s ease-out;
 }
+
