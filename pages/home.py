@@ -1,11 +1,12 @@
 import streamlit as st
 from helpers import go_to
+
 # ========== LOAD GLOBAL CSS ==========
 with open("style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 
-def render_home():
+def home_page():
     st.markdown('<div class="page-container">', unsafe_allow_html=True)
 
     prof = st.session_state.profile
