@@ -31,18 +31,16 @@ html, body, [class*="css"] {
     font-family: 'Inter', sans-serif;
 }
 
-/* Headings */
 h1, h2, h3, h4, h5 {
     color: #1f111a !important;
     font-family: 'Playfair Display', serif !important;
 }
 
-/* Subtext */
 p, span, label, li, td, th, .stMarkdown, .stText {
     color: #35202b !important;
 }
 
-/* Light header bar */
+/* Header */
 header[data-testid="stHeader"] {
     background-color: #ffffff !important;
     color: #2b1826 !important;
@@ -53,8 +51,17 @@ header[data-testid="stHeader"] * {
 }
 
 /* ======================================================
-   HERO SECTION
+   PARALLAX HERO
 ====================================================== */
+.parallax-hero {
+    animation: floaty 6s ease-in-out infinite alternate;
+}
+
+@keyframes floaty {
+    0% { transform: translateY(0px); }
+    100% { transform: translateY(-8px); }
+}
+
 .hero-title {
     font-size: 34px;
     font-weight: 700;
@@ -73,7 +80,91 @@ header[data-testid="stHeader"] * {
 }
 
 /* ======================================================
-   FEATURE CARDS
+   INTERACTIVE AI ORB (LAYER 5)
+====================================================== */
+.derm-orb {
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle at 35% 35%, #fff7fe, #ffb7dd, #ff92c7);
+    border-radius: 50%;
+    margin: 18px auto;
+    box-shadow:
+        0 0 30px rgba(255,130,190,0.65),
+        0 0 50px rgba(255,170,210,0.45),
+        inset 0 0 30px rgba(255,255,255,0.5);
+    animation: orbfloat 5s ease-in-out infinite alternate;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    cursor: pointer;
+}
+
+/* Hover = orb wakes up */
+.derm-orb:hover {
+    transform: scale(1.08) translateY(-6px) rotate(4deg);
+    box-shadow:
+        0 0 40px rgba(255,140,200,0.85),
+        0 0 80px rgba(255,180,220,0.55),
+        inset 0 0 40px rgba(255,255,255,0.65);
+}
+
+/* Clicking the orb = pulse */
+.derm-orb:active {
+    animation: pulse 0.4s ease-out;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.14); }
+    100% { transform: scale(1); }
+}
+
+/* Float */
+@keyframes orbfloat {
+    0%   { transform: translateY(0px); }
+    100% { transform: translateY(-12px); }
+}
+
+/* ======================================================
+   FLOATING PARTICLES
+====================================================== */
+.particle {
+    position: fixed;
+    width: 8px;
+    height: 8px;
+    background: rgba(255,170,210,0.45);
+    border-radius: 50%;
+    opacity: 0.9;
+    filter: blur(2px);
+    animation: drift 9s infinite ease-in-out;
+}
+
+@keyframes drift {
+    0%   { transform: translateY(0px) translateX(0px); }
+    50%  { transform: translateY(-40px) translateX(30px); }
+    100% { transform: translateY(0px) translateX(-30px); }
+}
+
+/* ======================================================
+   PARALLAX BACKLIGHT
+====================================================== */
+.parallax-bg {
+    position: fixed;
+    top: -20%;
+    left: -20%;
+    width: 160%;
+    height: 160%;
+    background: radial-gradient(circle at center, #ffe0f1 0%, #ffd2eb 40%, transparent 70%);
+    z-index: -5;
+    animation: bgfloat 14s ease-in-out infinite alternate;
+    filter: blur(70px);
+}
+
+@keyframes bgfloat {
+    0% { transform: translate(0,0); }
+    100% { transform: translate(40px, -40px); }
+}
+
+/* ======================================================
+   3D CARDS + GLOW
 ====================================================== */
 .feature-grid {
     max-width: 900px;
@@ -92,124 +183,60 @@ header[data-testid="stHeader"] * {
     border: 1px solid rgba(255,255,255,0.9);
     box-shadow: 0 18px 40px rgba(0,0,0,0.08);
     backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    transition: transform 0.18s ease-out, box-shadow 0.18s ease-out, border-color 0.18s ease-out, background 0.18s ease-out;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    transition: transform 0.18s ease-out, box-shadow 0.18s ease-out;
 }
 
 .premium-card:hover {
     transform: translateY(-4px) scale(1.01);
     box-shadow: 0 26px 60px rgba(0,0,0,0.18);
-    border-color: #f1b9d3;
-    background: linear-gradient(140deg, rgba(255,255,255,1), rgba(255,242,249,1));
 }
 
-.card-header-line {
-    font-size: 15px;
-    font-weight: 600;
-    color: #2f1a29;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+/* 3D Tilt */
+.tilt-card {
+    transform-style: preserve-3d;
+    transition: transform 0.25s ease-out;
+}
+.tilt-card:hover {
+    transform: perspective(900px) rotateX(6deg) rotateY(-6deg) scale(1.02);
 }
 
-.card-emoji {
-    font-size: 20px;
-}
-
-.card-subtitle {
-    font-size: 13px;
-    color: #8b6c80;
+/* Glow */
+.glow {
+    box-shadow:
+        0 0 12px rgba(255,163,205,0.45),
+        0 0 22px rgba(255,192,220,0.35),
+        0 0 36px rgba(255,215,235,0.25);
+    border: 1px solid rgba(255,180,210,0.45);
 }
 
 /* ======================================================
-   CHAT CARD + BUBBLES
+   BUTTONS, CHAT BUBBLES, FORMS
 ====================================================== */
-.chat-card {
-    background: rgba(255,255,255,0.98);
-    border-radius: 18px;
-    padding: 18px 22px;
-    box-shadow: 0 12px 30px rgba(0,0,0,0.07);
-    max-width: 780px;
-    margin: 1.5rem auto;
-    backdrop-filter: blur(18px);
-    border: 1px solid rgba(255,255,255,0.9);
-}
-
 .derm-bubble {
     background: #ffffff;
     padding: 12px 16px;
     border-radius: 14px;
-    margin-bottom: 8px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.05);
-    color: #251320 !important;
+    animation: slideIn 0.35s ease-out;
 }
 
 .user-bubble {
     background: #fbe3f4;
     padding: 12px 16px;
     border-radius: 14px;
-    margin-bottom: 8px;
     margin-left: 40px;
-    color: #251320 !important;
+    animation: slideInRight 0.35s ease-out;
 }
 
-/* ======================================================
-   BACK BUTTON
-====================================================== */
-.back-button-container {
-    max-width: 780px;
-    margin: 0.6rem auto 0 auto;
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-12px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(12px); }
+    to   { opacity: 1; transform: translateX(0); }
 }
 
-.back-button-container button {
-    background: #ffffff !important;
-    border-radius: 999px !important;
-    border: 1px solid rgba(222,174,203,0.9) !important;
-    font-size: 13px;
-    color: #7f556f !important;
-    padding: 4px 16px !important;
-    box-shadow: 0 8px 18px rgba(0,0,0,0.06);
-}
-
-/* ======================================================
-   INPUTS + TEXT AREAS
-====================================================== */
-input, textarea, .stTextInput, .stTextArea {
-    color: #251320 !important;
-}
-
-.stTextInput > div > div > input,
-.stTextArea > div > textarea {
-    background: #ffffff !important;
-    color: #251320 !important;
-    border-radius: 14px !important;
-    border: 1px solid #edd3e4 !important;
-}
-
-::placeholder {
-    color: #a27d98 !important;
-    opacity: 1 !important;
-}
-
-.stTextInput label, .stTextArea label {
-    color: #5c3b52 !important;
-}
-
-/* ======================================================
-   BUTTONS
-====================================================== */
-.stButton > button {
-    background: #251320 !important;
-    color: #ffffff !important;
-    border-radius: 999px !important;
-    border: none !important;
-    padding: 0.4rem 1.2rem !important;
-    font-size: 14px !important;
-    box-shadow: 0 10px 22px rgba(0,0,0,0.18);
-}
-.stButton > button:hover {
-    background: #3a2033 !important;
+/* Smooth transitions for all */
+* {
+    transition: all 0.20s ease-out;
 }
