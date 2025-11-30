@@ -1,101 +1,70 @@
-import json
-import numpy as np
-from PIL import Image
-import requests
-from datetime import datetime
-from config import OPENROUTER_API_KEY
 import os
+import json
+from datetime import datetime
+import sqlite3
 
+# Correct universal CSS loader for Streamlit Cloud
 def load_css():
-    css_path = os.path.join(os.path.dirname(__file__), "..", "style.css")
-    with open(css_path) as f:
+    base = os.path.dirname(os.path.abspath(__file__))
+    root_css = os.path.join(base, "style.css")       # try same folder
+    parent_css = os.path.join(base, "..", "style.css")  # try root folder
+
+    css_path = root_css if os.path.exists(root_css) else parent_css
+
+    with open(css_path, "r") as f:
         return f"<style>{f.read()}</style>"
 
 
-def go_to(st, page: str):
-    st.session_state.page = page
-    try:
-        st.experimental_set_query_params(page=page)
-    except:
-        pass
+# Simple internal router
+def go_to(st, page_name):
+    st.query_params(page=page_name)
 
-def detect_severe_keywords(text: str) -> bool:
-    severe = ["bleeding", "pus", "severe pain", "fever", "spreading", "infection", "open sore"]
-    t = (text or "").lower()
-    return any(word in t for word in severe)
 
-def append_message(st, role: str, text: str):
+# SQLite connection
+conn = sqlite3.connect("skinsync.db", check_same_thread=False)
+c = conn.cursor()
+
+# Create tables if not existing
+c.execute("""
+CREATE TABLE IF NOT EXISTS consults (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT,
+    data TEXT,
+    created_at TEXT
+)
+""")
+
+c.execute("""
+CREATE TABLE IF NOT EXISTS bookings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    email TEXT,
+    city TEXT,
+    date TEXT,
+    time TEXT,
+    reason TEXT,
+    created_at TEXT
+)
+""")
+
+conn.commit()
+
+
+# Session initializer
+def init_session(st):
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    if "profile" not in st.session_state:
+        st.session_state.profile = {"name": "Guest"}
+
+    if "session_id" not in st.session_state:
+        st.session_state.session_id = "user_" + datetime.utcnow().strftime("%Y%m%d%H%M%S")
+
+    if "last_plan" not in st.session_state:
+        st.session_state.last_plan = None
+
+
+# Chat helpers
+def append_message(st, role, text):
     st.session_state.messages.append({"role": role, "text": text})
-
-def build_system_prompt(st):
-    p = st.session_state.profile
-    return f"""
-You are SkinSync, a gentle AI dermatology assistant.
-
-User profile:
-- Name: {p.get('name') or 'User'}
-- Age range: {p['age_bucket']}
-- Skin type: {p['skin_type']}
-- Main concern: {p['main_concern']}
-- Sensitivity: {p['sensitivity']}
-- Location: {p['location'] or 'not specified'}
-
-Follow-ups:
-- Provide AM/PM routine
-- 1–2 DIY packs
-- Cautions
-- Warm and short
-"""
-
-def call_openrouter_chat(messages):
-    if not OPENROUTER_API_KEY:
-        return None, "No OPENROUTER_API_KEY found."
-
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://skinsync.streamlit.app",
-        "X-Title": "SkinSync AI",
-    }
-    payload = {
-        "model": "openai/gpt-4o-mini",
-        "messages": messages,
-        "temperature": 0.7,
-    }
-
-    try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
-        content = data["choices"][0]["message"]["content"]
-        return content, None
-    except Exception as e:
-        return None, str(e)
-
-def analyze_skin_image(image: Image.Image):
-    try:
-        img = image.convert("RGB")
-        arr = np.array(img).astype("float32")
-
-        r = arr[:, :, 0]
-        g = arr[:, :, 1]
-        b = arr[:, :, 2]
-
-        redness = r - (g + b) / 2
-        diff = redness.max() - redness.min() or 1e-6
-        normalized = (redness - redness.min()) / diff
-        mean_red = float(np.mean(normalized))
-
-        if mean_red < 0.25:
-            severity = "Very mild redness 🙂"
-        elif mean_red < 0.45:
-            severity = "Mild redness 🌸"
-        elif mean_red < 0.65:
-            severity = "Moderate redness 🔎"
-        else:
-            severity = "High redness ⚠️"
-
-        return mean_red, severity
-    except:
-        return 0.0, "Error analyzing image."

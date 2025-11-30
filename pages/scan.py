@@ -1,23 +1,16 @@
 import streamlit as st
-from PIL import Image
-from io import BytesIO
-from helpers import analyze_skin_image, go_to
-from helpers import load_css
+from helpers import go_to, load_css
+
 st.markdown(load_css(), unsafe_allow_html=True)
 
 def scan_page():
     if st.button("← Back"):
         go_to(st, "home")
 
-    st.markdown("### 📷 Skin Image Analysis")
+    st.write("### 📷 Skin Analysis")
 
-    uploaded = st.file_uploader("Upload a face photo", type=["png", "jpg", "jpeg"])
+    img = st.file_uploader("Upload your face photo")
 
-    if uploaded:
-        img = Image.open(BytesIO(uploaded.read()))
-        st.image(img, caption="Uploaded Image", use_column_width=True)
-
-        if st.button("Analyze"):
-            score, severity = analyze_skin_image(img)
-            st.write(f"Redness Score: `{score:.2f}`")
-            st.write(f"Severity: **{severity}**")
+    if img:
+        st.image(img, caption="Uploaded Image")
+        st.success("Image received! AI skin analysis module will be added soon 💗")

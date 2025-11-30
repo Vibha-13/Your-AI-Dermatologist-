@@ -1,32 +1,30 @@
 import streamlit as st
 from datetime import datetime
-from config import c, conn
-from helpers import go_to
-from helpers import load_css
+from helpers import conn, c, go_to, load_css
+
 st.markdown(load_css(), unsafe_allow_html=True)
-
-
 
 def appointments_page():
     if st.button("← Back"):
         go_to(st, "home")
 
-    st.markdown("### 📅 Book Appointment")
+    st.write("### 📅 Book Appointment")
 
-    with st.form("form"):
-        name = st.text_input("Full name")
+    with st.form("book"):
+        name = st.text_input("Name")
         email = st.text_input("Email")
         city = st.text_input("City")
-        date = st.date_input("Preferred date", min_value=datetime.today())
-        time = st.time_input("Preferred time")
+        date = st.date_input("Date")
+        time = st.time_input("Time")
         reason = st.text_area("Reason")
 
         submit = st.form_submit_button("Book")
 
         if submit:
-            c.execute(
-                "INSERT INTO bookings (name,email,city,date,time,reason,created_at) VALUES (?,?,?,?,?,?,?)",
-                (name, email, city, str(date), str(time), reason, datetime.utcnow().isoformat())
-            )
+            c.execute("""
+                INSERT INTO bookings (name,email,city,date,time,reason,created_at)
+                VALUES (?,?,?,?,?,?,?)
+            """, (name, email, city, str(date), str(time), reason, datetime.utcnow().isoformat()))
             conn.commit()
+
             st.success("Appointment saved!")
