@@ -4,6 +4,13 @@ from PIL import Image
 import requests
 from datetime import datetime
 from config import OPENROUTER_API_KEY
+import os
+
+def load_css():
+    css_path = os.path.join(os.path.dirname(__file__), "..", "style.css")
+    with open(css_path) as f:
+        return f"<style>{f.read()}</style>"
+
 
 def go_to(st, page: str):
     st.session_state.page = page

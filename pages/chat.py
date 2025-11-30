@@ -1,7 +1,7 @@
 import streamlit as st
-# ========== LOAD GLOBAL CSS ==========
-with open("style.css") as f:
-    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+from helpers import load_css
+st.markdown(load_css(), unsafe_allow_html=True)
+
 
 from helpers import (
     append_message, detect_severe_keywords, build_system_prompt,
