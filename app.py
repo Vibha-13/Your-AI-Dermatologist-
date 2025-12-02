@@ -267,9 +267,22 @@ st.markdown(
     .stTextInput label, .stTextArea label {
         color: #5c3b52 !important;
     }
-    .stButton > button:hover {
-        background: #3a2033 !important;
+    /* Unified Button Styling — Light Lavender Aesthetic */
+    .stButton > button {
+    background-color: #eadcff !important;   /* soft lavender */
+    color: #3a0030 !important;              /* deep plum text */
+    border-radius: 25px !important;
+    font-weight: 600 !important;
+    border: 1px solid #d6c0f5 !important;   /* subtle lavender border */
+    padding: 0.45rem 1.2rem !important;
+    font-size: 14px !important;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.08);
     }
+    .stButton > button:hover {
+    background-color: #d8c1ff !important;   /* slightly darker hover */
+    color: #2a0025 !important;
+    }
+
     </style>
     """,
     unsafe_allow_html=True,
