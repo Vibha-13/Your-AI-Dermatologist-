@@ -590,9 +590,11 @@ def render_home():
 
 def render_chat():
     render_back_to_home()
+
     st.markdown('<div class="page-container">', unsafe_allow_html=True)
     st.markdown("### 🩺 AI Derm Chat", unsafe_allow_html=True)
 
+    # --- Profile header ---
     prof = st.session_state.profile
     st.markdown(
         f"<p style='font-size:12px;opacity:0.8;'>"
@@ -601,9 +603,11 @@ def render_chat():
         unsafe_allow_html=True,
     )
 
+    # --- CHAT CONTAINER ---
     with st.container():
         st.markdown('<div class="chat-card">', unsafe_allow_html=True)
 
+        # Initial assistant message
         if not st.session_state.messages:
             append_message(
                 "assistant",
@@ -612,6 +616,7 @@ def render_chat():
                 "and what products you use. I’ll help you build a gentle AM/PM routine."
             )
 
+        # Display chat history
         for m in st.session_state.messages:
             if m["role"] == "assistant":
                 st.markdown(
@@ -624,23 +629,29 @@ def render_chat():
                     unsafe_allow_html=True,
                 )
 
+        # ---------------------------
+        # CHAT INPUT (FIXED CLEANING)
+        # ---------------------------
         user_input = st.text_input("You:", key="chat_input")
-        cols = st.columns([1, 1])
-        with cols[0]:
-            send_clicked = st.button("Send", key="chat_send")
-        with cols[1]:
-            save_clicked = st.button("💾 Save consult", key="save_consult")
 
+        col_send, col_save = st.columns([1, 1])
+        send_clicked = col_send.button("Send", key="send_btn")
+        save_clicked = col_save.button("💾 Save consult", key="save_consult_btn")
+
+        # --- When SEND is clicked ---
         if send_clicked:
             if not user_input.strip():
                 st.warning("Please type something 💗")
             else:
+                # User message
                 append_message("user", user_input)
 
+                # Build model messages
                 messages = [{"role": "system", "content": build_system_prompt()}]
                 for m in st.session_state.messages:
                     messages.append({"role": m["role"], "content": m["text"]})
 
+                # Severity detection
                 if detect_severe_keywords(user_input):
                     warn = (
                         "I noticed words like pain, pus, fever or rapid spreading. "
@@ -650,11 +661,13 @@ def render_chat():
                     append_message("assistant", warn)
                     messages.append({"role": "assistant", "content": warn})
 
+                # Model call
                 reply_text, err = call_openrouter_chat(messages)
+
                 if err:
                     fallback = (
                         "I couldn't contact the AI engine right now, but based on what you said "
-                        "I suggest keeping your routine simple: gentle cleanser, moisturizer and sunscreen. "
+                        "I'd suggest keeping your routine simple: gentle cleanser, moisturizer and sunscreen. "
                         "Introduce actives slowly and always patch test first."
                     )
                     append_message("assistant", fallback)
@@ -664,6 +677,35 @@ def render_chat():
                     append_message("assistant", reply_text)
                     st.session_state.last_plan = reply_text
 
+                # ✨ FIX: Clear input box immediately
+                st.session_state.chat_input = ""
+
+        # ---------------------------
+        # Save consult
+        # ---------------------------
+        if save_clicked:
+            if st.session_state.last_plan is None:
+                st.warning("No consult to save yet — send a message first 🧾")
+            else:
+                payload = {
+                    "profile": st.session_state.profile,
+                    "conversation": st.session_state.messages,
+                    "last_plan": st.session_state.last_plan,
+                }
+                c.execute(
+                    "INSERT INTO consults (session_id, data, created_at) VALUES (?, ?, ?)",
+                    (
+                        st.session_state.session_id,
+                        json.dumps(payload),
+                        datetime.utcnow().isoformat(),
+                    ),
+                )
+                conn.commit()
+                st.success("Consult saved to history ✅")
+
+        # ---------------------------
+        # Download + Routine Snapshot
+        # ---------------------------
         if st.session_state.last_plan:
             st.download_button(
                 "⬇️ Download routine (.txt)",
@@ -675,27 +717,8 @@ def render_chat():
             with st.expander("📌 View latest routine snapshot"):
                 st.markdown(st.session_state.last_plan)
 
-        if save_clicked:
-            if st.session_state.last_plan is None:
-                st.warning("No consult to save yet — send a message and get at least one AI reply first 🧾")
-            else:
-                payload = {
-                    "profile": st.session_state.profile,
-                    "conversation": st.session_state.messages,
-                    "last_plan": st.session_state.last_plan,
-                }
-                c.execute(
-                    "INSERT INTO consults (session_id,data,created_at) VALUES (?,?,?)",
-                    (
-                        st.session_state.session_id,
-                        json.dumps(payload),
-                        datetime.utcnow().isoformat(),
-                    ),
-                )
-                conn.commit()
-                st.success("Consult saved to history ✅")
-
         st.markdown("</div>", unsafe_allow_html=True)
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 def render_scan():
