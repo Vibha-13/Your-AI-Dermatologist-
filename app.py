@@ -694,7 +694,9 @@ def render_chat():
 
                 # ⭐ SAFE input clear
                 st.session_state.chat_text = ""
-                st.experimental_rerun()
+                st.session_state.trigger_rerun = True
+                return
+
 
         # -------------------------------
         # SAVE CONSULT
