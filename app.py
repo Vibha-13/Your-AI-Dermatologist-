@@ -10,6 +10,8 @@ from PIL import Image
 import numpy as np
 import requests
 
+if "chat_text" not in st.session_state:
+    st.session_state.chat_text = ""
 # ========== ENV & API KEY ==========
 load_dotenv()
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -588,13 +590,17 @@ def render_home():
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
+
+
 def render_chat():
     render_back_to_home()
 
     st.markdown('<div class="page-container">', unsafe_allow_html=True)
     st.markdown("### 🩺 AI Derm Chat", unsafe_allow_html=True)
 
-    # --- Profile header ---
+    # -------------------------------
+    # Profile header
+    # -------------------------------
     prof = st.session_state.profile
     st.markdown(
         f"<p style='font-size:12px;opacity:0.8;'>"
@@ -603,11 +609,11 @@ def render_chat():
         unsafe_allow_html=True,
     )
 
-    # --- CHAT CONTAINER ---
+    # Chat UI container
     with st.container():
         st.markdown('<div class="chat-card">', unsafe_allow_html=True)
 
-        # Initial assistant message
+        # First message by assistant
         if not st.session_state.messages:
             append_message(
                 "assistant",
@@ -616,7 +622,7 @@ def render_chat():
                 "and what products you use. I’ll help you build a gentle AM/PM routine."
             )
 
-        # Display chat history
+        # Render chat history
         for m in st.session_state.messages:
             if m["role"] == "assistant":
                 st.markdown(
@@ -629,29 +635,38 @@ def render_chat():
                     unsafe_allow_html=True,
                 )
 
-        # ---------------------------
-        # CHAT INPUT (FIXED CLEANING)
-        # ---------------------------
-        user_input = st.text_input("You:", key="chat_input")
+        # ----------------------------------------
+        # Chat input (safe clearing mechanism)
+        # ----------------------------------------
+        if "chat_text" not in st.session_state:
+            st.session_state.chat_text = ""
+
+        user_input = st.text_input(
+            "You:",
+            value=st.session_state.chat_text,
+            key="chat_box"
+        )
 
         col_send, col_save = st.columns([1, 1])
         send_clicked = col_send.button("Send", key="send_btn")
         save_clicked = col_save.button("💾 Save consult", key="save_consult_btn")
 
-        # --- When SEND is clicked ---
+        # -------------------------------
+        # SEND BUTTON logic
+        # -------------------------------
         if send_clicked:
             if not user_input.strip():
                 st.warning("Please type something 💗")
             else:
-                # User message
+                # Add user message
                 append_message("user", user_input)
 
-                # Build model messages
+                # Build messages for LLM
                 messages = [{"role": "system", "content": build_system_prompt()}]
                 for m in st.session_state.messages:
                     messages.append({"role": m["role"], "content": m["text"]})
 
-                # Severity detection
+                # Detect severe keywords
                 if detect_severe_keywords(user_input):
                     warn = (
                         "I noticed words like pain, pus, fever or rapid spreading. "
@@ -661,14 +676,14 @@ def render_chat():
                     append_message("assistant", warn)
                     messages.append({"role": "assistant", "content": warn})
 
-                # Model call
+                # Call OpenRouter
                 reply_text, err = call_openrouter_chat(messages)
 
                 if err:
                     fallback = (
                         "I couldn't contact the AI engine right now, but based on what you said "
-                        "I'd suggest keeping your routine simple: gentle cleanser, moisturizer and sunscreen. "
-                        "Introduce actives slowly and always patch test first."
+                        "I'd suggest keeping your routine simple: gentle cleanser, moisturizer, sunscreen. "
+                        "Add actives slowly and patch test."
                     )
                     append_message("assistant", fallback)
                     st.session_state.last_plan = fallback
@@ -677,18 +692,16 @@ def render_chat():
                     append_message("assistant", reply_text)
                     st.session_state.last_plan = reply_text
 
-               
-                # ✨ FIX: Reset input field after sending
-                    st.session_state["chat_input"] = ""
-                    st.experimental_rerun()
+                # ⭐ SAFE input clear
+                st.session_state.chat_text = ""
+                st.experimental_rerun()
 
-
-        # ---------------------------
-        # Save consult
-        # ---------------------------
+        # -------------------------------
+        # SAVE CONSULT
+        # -------------------------------
         if save_clicked:
             if st.session_state.last_plan is None:
-                st.warning("No consult to save yet — send a message first 🧾")
+                st.warning("No consult to save yet — please send a message first 🧾")
             else:
                 payload = {
                     "profile": st.session_state.profile,
@@ -706,9 +719,9 @@ def render_chat():
                 conn.commit()
                 st.success("Consult saved to history ✅")
 
-        # ---------------------------
-        # Download + Routine Snapshot
-        # ---------------------------
+        # -------------------------------
+        # ROUTINE SNAPSHOT + DOWNLOAD
+        # -------------------------------
         if st.session_state.last_plan:
             st.download_button(
                 "⬇️ Download routine (.txt)",
