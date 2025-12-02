@@ -263,13 +263,13 @@ st.markdown(
     }
 
     .stButton > button {
-        background: #251320 !important;
-        color: #ffffff !important;
-        border-radius: 999px !important;
-        border: none !important;
-        padding: 0.4rem 1.2rem !important;
-        font-size: 14px !important;
-        box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+    background: #251320 !important;  /* your dark plum */
+    color: #ffffff !important;       /* white text so it's visible */
+    border-radius: 999px !important;
+    border: none !important;
+    padding: 0.4rem 1.2rem !important;
+    font-size: 14px !important;
+    box-shadow: 0 10px 22px rgba(0,0,0,0.18);
     }
     .stButton > button:hover {
         background: #3a2033 !important;
@@ -593,88 +593,151 @@ def render_home():
 
 
 def render_chat():
+    # Top nav
     render_back_to_home()
     st.markdown('<div class="page-container">', unsafe_allow_html=True)
     st.markdown("### 🩺 AI Derm Chat", unsafe_allow_html=True)
 
-    # ---------------------------
-    # Ensure chat session exists
-    # ---------------------------
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+    # Small profile line
+    prof = st.session_state.profile
+    st.markdown(
+        f"<p style='font-size:12px;opacity:0.8;'>"
+        f"Profile: <strong>{prof.get('skin_type')}</strong> skin · "
+        f"{prof.get('main_concern')} · sensitivity: {prof.get('sensitivity')}</p>",
+        unsafe_allow_html=True,
+    )
 
-    if "last_plan" not in st.session_state:
-        st.session_state.last_plan = None
+    # ---------- chat state keys ----------
+    # Text currently typed into the box
+    if "chat_input" not in st.session_state:
+        st.session_state.chat_input = ""
 
-    # ---------------------------
-    # Show existing messages
-    # ---------------------------
-    for m in st.session_state.messages:
-        if m["role"] == "assistant":
-            st.markdown(
-                f"<div class='derm-bubble'><strong>Derm</strong>: {m['text']}</div>",
-                unsafe_allow_html=True,
+    # Text that should be processed *this* run after clicking Send
+    if "pending_user_input" not in st.session_state:
+        st.session_state.pending_user_input = ""
+
+    with st.container():
+        st.markdown('<div class="chat-card">', unsafe_allow_html=True)
+
+        # First message from derm
+        if not st.session_state.messages:
+            append_message(
+                "assistant",
+                "Hi, I’m your SkinSync AI skincare assistant 🌿\n\n"
+                "Tell me about your skin today — your main concern, how long it's been there, "
+                "and what products you use. I’ll help you build a gentle AM/PM routine."
             )
-        else:
-            st.markdown(
-                f"<div class='user-bubble'><strong>You</strong>: {m['text']}</div>",
-                unsafe_allow_html=True,
-            )
 
-    # ---------------------------
-    # Chat input (no lag)
-    # ---------------------------
-    user_input = st.chat_input("Ask something about your skin…")
-
-    if user_input:
-        # Add user message
-        st.session_state.messages.append({"role": "user", "text": user_input})
-
-        # Build message list for model
-        messages = [{"role": "system", "content": build_system_prompt()}]
+        # Show conversation so far
         for m in st.session_state.messages:
-            messages.append({"role": m["role"], "content": m["text"]})
+            if m["role"] == "assistant":
+                st.markdown(
+                    f"<div class='derm-bubble'><strong>Derm</strong>: {m['text']}</div>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f"<div class='user-bubble'><strong>You</strong>: {m['text']}</div>",
+                    unsafe_allow_html=True,
+                )
 
-        # Detect emergencies
-        if detect_severe_keywords(user_input):
-            warn = (
-                "I noticed severe symptoms—please consider visiting a dermatologist. "
-                "I can still give you gentle skincare guidance 💗"
-            )
-            st.session_state.messages.append({"role": "assistant", "text": warn})
-            messages.append({"role": "assistant", "content": warn})
+        # ---------- Send logic with callback ----------
+        def handle_send():
+            """Called only when Send is clicked."""
+            text = st.session_state.get("chat_input", "").strip()
+            if not text:
+                return
+            # pass the message to main logic
+            st.session_state.pending_user_input = text
+            # clear the visible text box
+            st.session_state.chat_input = ""
 
-        # Call model
-        reply, err = call_openrouter_chat(messages)
-
-        if err:
-            fallback = (
-                "The AI engine is busy right now 💗.\n"
-                "Meanwhile, keep your routine simple: gentle cleanser · moisturizer · sunscreen."
-            )
-            st.session_state.messages.append({"role": "assistant", "text": fallback})
-            st.session_state.last_plan = fallback
-        else:
-            st.session_state.messages.append({"role": "assistant", "text": reply})
-            st.session_state.last_plan = reply
-
-        st.rerun()
-
-    # ---------------------------
-    # Save & view snapshot
-    # ---------------------------
-    if st.session_state.last_plan:
-        st.download_button(
-            "⬇️ Download routine (.txt)",
-            st.session_state.last_plan,
-            "skinsync_routine.txt",
-            mime="text/plain",
+        # Input + buttons row
+        user_input = st.text_input(
+            "You:",
+            key="chat_input",
         )
 
-        with st.expander("📌 View latest routine snapshot"):
-            st.markdown(st.session_state.last_plan)
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            st.button("Send", key="chat_send", on_click=handle_send)
+        with col2:
+            save_clicked = st.button("💾 Save consult", key="save_consult")
+
+        # ---------- Process the message once per click ----------
+        if st.session_state.pending_user_input:
+            user_text = st.session_state.pending_user_input
+            # reset so it runs only once
+            st.session_state.pending_user_input = ""
+
+            append_message("user", user_text)
+
+            messages = [{"role": "system", "content": build_system_prompt()}]
+            for m in st.session_state.messages:
+                messages.append({"role": m["role"], "content": m["text"]})
+
+            if detect_severe_keywords(user_text):
+                warn = (
+                    "I noticed words like pain, pus, fever or rapid spreading. "
+                    "This can be serious. I can give gentle skin-care tips, "
+                    "but please consider seeing an in-person dermatologist soon. 🧑‍⚕️"
+                )
+                append_message("assistant", warn)
+                messages.append({"role": "assistant", "content": warn})
+
+            reply_text, err = call_openrouter_chat(messages)
+            if err:
+                fallback = (
+                    "I couldn't contact the AI engine right now, but based on what you said "
+                    "I suggest keeping your routine simple: gentle cleanser, moisturizer and sunscreen. "
+                    "Introduce actives slowly and always patch test first."
+                )
+                append_message("assistant", fallback)
+                st.session_state.last_plan = fallback
+                st.error(err)
+            else:
+                append_message("assistant", reply_text)
+                st.session_state.last_plan = reply_text
+
+        # ---------- Download latest routine ----------
+        if st.session_state.last_plan:
+            st.download_button(
+                "⬇️ Download routine (.txt)",
+                data=st.session_state.last_plan,
+                file_name="skinsync_routine.txt",
+                mime="text/plain",
+            )
+
+            with st.expander("📌 View latest routine snapshot"):
+                st.markdown(st.session_state.last_plan)
+
+        # ---------- Save consult to DB ----------
+        if save_clicked:
+            if st.session_state.last_plan is None:
+                st.warning(
+                    "No consult to save yet — send a message and get at least one AI reply first 🧾"
+                )
+            else:
+                payload = {
+                    "profile": st.session_state.profile,
+                    "conversation": st.session_state.messages,
+                    "last_plan": st.session_state.last_plan,
+                }
+                c.execute(
+                    "INSERT INTO consults (session_id,data,created_at) VALUES (?,?,?)",
+                    (
+                        st.session_state.session_id,
+                        json.dumps(payload),
+                        datetime.utcnow().isoformat(),
+                    ),
+                )
+                conn.commit()
+                st.success("Consult saved to history ✅")
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 def render_scan():
     render_back_to_home()
