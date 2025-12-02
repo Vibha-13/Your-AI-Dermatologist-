@@ -677,8 +677,11 @@ def render_chat():
                     append_message("assistant", reply_text)
                     st.session_state.last_plan = reply_text
 
-                # ✨ FIX: Clear input box immediately
-                st.session_state.chat_input = ""
+               
+                # ✨ FIX: Reset input field after sending
+                    st.session_state["chat_input"] = ""
+                    st.experimental_rerun()
+
 
         # ---------------------------
         # Save consult
