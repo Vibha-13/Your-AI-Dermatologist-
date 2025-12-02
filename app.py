@@ -242,6 +242,17 @@ st.markdown(
         padding: 4px 16px !important;
         box-shadow: 0 8px 18px rgba(0,0,0,0.06);
     }
+    /* Make only the Send + Save Consult button text visible */
+   .stButton > button {
+    color: white !important;        /* Button text becomes white */
+    font-weight: 600 !important;
+    }
+
+    /* Optional: make input text black so it's clearly visible */
+    .stTextInput input {
+    color: black !important;
+    }
+
 
     /* Inputs & buttons */
     input, textarea, .stTextInput, .stTextArea {
