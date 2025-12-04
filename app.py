@@ -9,9 +9,12 @@ from io import BytesIO
 from PIL import Image
 import numpy as np
 import requests
+import re
 
+# ---------- SESSION STATE MISC ----------
 if "chat_text" not in st.session_state:
     st.session_state.chat_text = ""
+
 # ========== ENV & API KEY ==========
 load_dotenv()
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -43,6 +46,7 @@ if st.session_state.show_splash:
         align-items: center;
         z-index: 9999;
         animation: fadeOut 1.2s ease-out 1.8s forwards;
+        pointer-events: none;
     ">
         <div style="text-align:center; animation: fadeIn 1s ease-out forwards;">
             <div style="font-size:12px; letter-spacing:0.25em; color:#7a5a71; margin-bottom:6px;">
@@ -54,13 +58,9 @@ if st.session_state.show_splash:
         </div>
     </div>
     """
-
     st.markdown(splash_html, unsafe_allow_html=True)
-
-    import time
-    time.sleep(3)  # total timing: 1.8s delay + 1.2s fade
+    # Show it only once per session; no blocking sleep
     st.session_state.show_splash = False
-
 
 # ========== BASIC CONFIG ==========
 st.set_page_config(
@@ -70,7 +70,8 @@ st.set_page_config(
 )
 
 # ---------- Global Light Theme / Text Fix ----------
-st.markdown("""
+st.markdown(
+    """
     <style>
     @media (prefers-color-scheme: dark) {
         html, body, [class*="css"] {
@@ -101,9 +102,11 @@ st.markdown("""
         fill: #2b1826 !important;
     }
     </style>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True,
+)
 
-# ---------- GLOBAL STYLES (ROSY AESTHETIC) ----------
+# ---------- GLOBAL STYLES (ROSY / LAVENDER AESTHETIC) ----------
 st.markdown(
     """
     <style>
@@ -242,12 +245,11 @@ st.markdown(
         padding: 4px 16px !important;
         box-shadow: 0 8px 18px rgba(0,0,0,0.06);
     }
-    
+
     /* Optional: make input text black so it's clearly visible */
     .stTextInput input {
-    color: black !important;
+        color: black !important;
     }
-
 
     /* Inputs & buttons */
     input, textarea, .stTextInput, .stTextArea {
@@ -267,20 +269,21 @@ st.markdown(
     .stTextInput label, .stTextArea label {
         color: #5c3b52 !important;
     }
+
     /* Unified Button Styling — Light Lavender Aesthetic */
     .stButton > button {
-    background-color: #eadcff !important;   /* soft lavender */
-    color: #3a0030 !important;              /* deep plum text */
-    border-radius: 25px !important;
-    font-weight: 600 !important;
-    border: 1px solid #d6c0f5 !important;   /* subtle lavender border */
-    padding: 0.45rem 1.2rem !important;
-    font-size: 14px !important;
-    box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+        background-color: #eadcff !important;   /* soft lavender */
+        color: #3a0030 !important;              /* deep plum text */
+        border-radius: 25px !important;
+        font-weight: 600 !important;
+        border: 1px solid #d6c0f5 !important;   /* subtle lavender border */
+        padding: 0.45rem 1.2rem !important;
+        font-size: 14px !important;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.08);
     }
     .stButton > button:hover {
-    background-color: #d8c1ff !important;   /* slightly darker hover */
-    color: #2a0025 !important;
+        background-color: #d8c1ff !important;   /* slightly darker hover */
+        color: #2a0025 !important;
     }
 
     </style>
@@ -289,10 +292,18 @@ st.markdown(
 )
 
 # ========== DB SETUP ==========
+
 DB_PATH = "skinsync.db"
-conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+
+@st.cache_resource
+def get_connection():
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    return conn
+
+conn = get_connection()
 c = conn.cursor()
 
+# Safe to run on every start; IF NOT EXISTS avoids duplicates
 c.execute(
     """CREATE TABLE IF NOT EXISTS bookings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -333,6 +344,8 @@ if "profile" not in st.session_state:
         "sensitivity": "Normal",
         "location": "",
     }
+if "consent" not in st.session_state:
+    st.session_state.consent = False
 
 # ---------- ROUTING FROM QUERY PARAMS ----------
 qs = st.experimental_get_query_params()
@@ -347,6 +360,11 @@ def go_to(page: str):
         st.experimental_set_query_params(page=page)
     except Exception:
         pass
+
+def is_valid_email(email: str) -> bool:
+    if not email:
+        return False
+    return re.match(r"[^@]+@[^@]+\.[^@]+", email) is not None
 
 def detect_severe_keywords(text: str) -> bool:
     severe = ["bleeding", "pus", "severe pain", "fever", "spreading", "infection", "open sore"]
@@ -386,9 +404,25 @@ Your goals:
   5. ⚠️ Caution / when to see a dermatologist
 """
 
-def call_openrouter_chat(messages):
+def build_chat_messages():
+    """
+    Build the messages list with a system prompt + recent history only
+    to avoid token explosions.
+    """
+    messages = [{"role": "system", "content": build_system_prompt()}]
+
+    # Keep only the last 10 turns
+    recent = st.session_state.messages[-10:]
+
+    for m in recent:
+        role = "assistant" if m["role"] == "assistant" else "user"
+        messages.append({"role": role, "content": m["text"]})
+
+    return messages
+
+def call_openrouter_chat(messages, retries=1):
     if not OPENROUTER_API_KEY:
-        return None, "No OPENROUTER_API_KEY found in environment."
+        return None, "Missing API key — please set OPENROUTER_API_KEY in your environment."
 
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
@@ -397,19 +431,30 @@ def call_openrouter_chat(messages):
         "HTTP-Referer": "https://skinsync.streamlit.app",
         "X-Title": "SkinSync AI Dermatologist",
     }
+
     payload = {
         "model": "openai/gpt-4o-mini",
         "messages": messages,
         "temperature": 0.65,
     }
-    try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
-        content = data["choices"][0]["message"]["content"]
-        return content, None
-    except Exception as e:
-        return None, f"Error calling OpenRouter: {e}"
+
+    for attempt in range(retries + 1):
+        try:
+            resp = requests.post(url, headers=headers, json=payload, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            content = data["choices"][0]["message"]["content"]
+            return content, None
+        except requests.Timeout:
+            if attempt < retries:
+                continue
+            return None, "The AI service is taking too long to respond. Please try again in a moment."
+        except requests.RequestException:
+            if attempt < retries:
+                continue
+            return None, "I’m having trouble reaching the AI service right now. Please try again soon."
+        except Exception:
+            return None, "Something went wrong while generating the response."
 
 def analyze_skin_image(image: Image.Image):
     try:
@@ -452,7 +497,6 @@ def analyze_skin_image(image: Image.Image):
     except Exception:
         return 0.0, "Unable to analyze this image — please upload a clearer photo."
 
-
 # ========== SIDEBAR: SKIN PROFILE ==========
 with st.sidebar:
     st.markdown("#### 🌸 Your Skin Profile")
@@ -491,6 +535,17 @@ with st.sidebar:
     p["location"] = st.text_input("Location (city, optional)", value=p["location"])
     st.session_state.profile = p
 
+    st.markdown("---")
+    st.markdown(
+        "⚕️ **Important:** SkinSync gives educational skincare guidance only, "
+        "not medical diagnosis or treatment."
+    )
+    consent = st.checkbox(
+        "I understand this is **not** a substitute for a dermatologist.",
+        value=st.session_state.consent,
+    )
+    st.session_state.consent = consent
+
 # ========== LAYOUT HELPER ==========
 def render_back_to_home():
     with st.container():
@@ -500,6 +555,7 @@ def render_back_to_home():
         st.markdown("</div>", unsafe_allow_html=True)
 
 # ========== PAGES ==========
+
 def render_home():
     st.markdown('<div class="page-container">', unsafe_allow_html=True)
 
@@ -599,13 +655,19 @@ def render_home():
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-
-
 def render_chat():
     # Top nav
     render_back_to_home()
     st.markdown('<div class="page-container">', unsafe_allow_html=True)
     st.markdown("### 🩺 AI Derm Chat", unsafe_allow_html=True)
+
+    # --------- CONSENT CHECK ---------
+    if not st.session_state.consent:
+        st.warning(
+            "Please confirm in the left sidebar that you understand SkinSync is not a doctor "
+            "before using the AI chat."
+        )
+        return
 
     # Small profile line
     prof = st.session_state.profile
@@ -617,18 +679,16 @@ def render_chat():
     )
 
     # ---------- chat state keys ----------
-    # Text currently typed into the box
     if "chat_input" not in st.session_state:
         st.session_state.chat_input = ""
 
-    # Text that should be processed *this* run after clicking Send
     if "pending_user_input" not in st.session_state:
         st.session_state.pending_user_input = ""
 
     with st.container():
         st.markdown('<div class="chat-card">', unsafe_allow_html=True)
 
-        # First message from derm
+        # ---------- First message ----------
         if not st.session_state.messages:
             append_message(
                 "assistant",
@@ -637,7 +697,7 @@ def render_chat():
                 "and what products you use. I’ll help you build a gentle AM/PM routine."
             )
 
-        # Show conversation so far
+        # ---------- Show conversation ----------
         for m in st.session_state.messages:
             if m["role"] == "assistant":
                 st.markdown(
@@ -650,22 +710,16 @@ def render_chat():
                     unsafe_allow_html=True,
                 )
 
-        # ---------- Send logic with callback ----------
+        # ---------- send callback ----------
         def handle_send():
-            """Called only when Send is clicked."""
             text = st.session_state.get("chat_input", "").strip()
             if not text:
                 return
-            # pass the message to main logic
             st.session_state.pending_user_input = text
-            # clear the visible text box
             st.session_state.chat_input = ""
 
-        # Input + buttons row
-        user_input = st.text_input(
-            "You:",
-            key="chat_input",
-        )
+        # ---------- Input + buttons ----------
+        user_input = st.text_input("You:", key="chat_input")
 
         col1, col2 = st.columns([1, 1])
         with col1:
@@ -673,18 +727,24 @@ def render_chat():
         with col2:
             save_clicked = st.button("💾 Save consult", key="save_consult")
 
-        # ---------- Process the message once per click ----------
+        # ==========================================================
+        # PROCESS USER MESSAGE (MAIN LOGIC)
+        # ==========================================================
         if st.session_state.pending_user_input:
             user_text = st.session_state.pending_user_input
-            # reset so it runs only once
             st.session_state.pending_user_input = ""
+
+            # Trim extremely long messages
+            if len(user_text) > 2000:
+                user_text = user_text[:2000]
+                st.info("Your message was quite long, so I trimmed it slightly to process it.")
 
             append_message("user", user_text)
 
-            messages = [{"role": "system", "content": build_system_prompt()}]
-            for m in st.session_state.messages:
-                messages.append({"role": m["role"], "content": m["text"]})
+            # ------------ Build messages (with trimming) ------------
+            messages = build_chat_messages()
 
+            # ------------ Severe keyword detection ------------
             if detect_severe_keywords(user_text):
                 warn = (
                     "I noticed words like pain, pus, fever or rapid spreading. "
@@ -694,7 +754,10 @@ def render_chat():
                 append_message("assistant", warn)
                 messages.append({"role": "assistant", "content": warn})
 
-            reply_text, err = call_openrouter_chat(messages)
+            # ------------ API Call with spinner ------------
+            with st.spinner("Thinking about your skin routine…"):
+                reply_text, err = call_openrouter_chat(messages)
+
             if err:
                 fallback = (
                     "I couldn't contact the AI engine right now, but based on what you said "
@@ -703,7 +766,7 @@ def render_chat():
                 )
                 append_message("assistant", fallback)
                 st.session_state.last_plan = fallback
-                st.error(err)
+                st.warning(err)
             else:
                 append_message("assistant", reply_text)
                 st.session_state.last_plan = reply_text
@@ -720,7 +783,7 @@ def render_chat():
             with st.expander("📌 View latest routine snapshot"):
                 st.markdown(st.session_state.last_plan)
 
-        # ---------- Save consult to DB ----------
+        # ---------- Save consult ----------
         if save_clicked:
             if st.session_state.last_plan is None:
                 st.warning(
@@ -747,12 +810,18 @@ def render_chat():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-
 def render_scan():
     render_back_to_home()
-
     st.markdown('<div class="page-container">', unsafe_allow_html=True)
     st.markdown("### 📷 Skin Image Analysis")
+
+    # CONSENT CHECK
+    if not st.session_state.consent:
+        st.warning(
+            "Please confirm in the sidebar that you understand this is an educational tool "
+            "only before using image analysis."
+        )
+        return
 
     col1, col2 = st.columns([1.2, 1])
 
@@ -795,7 +864,6 @@ colour channels, normalization, and severity mapping.
         )
 
     st.markdown("</div>", unsafe_allow_html=True)
-
 
 def render_history():
     render_back_to_home()
@@ -849,7 +917,11 @@ def render_history():
     )
 
     ids = filtered["id"].tolist()
-    selected_id = st.selectbox("View full consult by ID", ids)
+    if ids:
+        selected_id = st.selectbox("View full consult by ID", ids)
+    else:
+        selected_id = None
+
     if selected_id:
         row = df[df["id"] == selected_id].iloc[0]
         try:
@@ -887,26 +959,32 @@ def render_appointments():
         date = st.date_input("Preferred date", min_value=datetime.today())
         time_val = st.time_input("Preferred time")
         reason = st.text_area("Reason for visit", value="Skin consultation")
+
         submitted = st.form_submit_button("Book appointment")
         if submitted:
-            c.execute(
-                "INSERT INTO bookings (name,email,city,date,time,reason,created_at) "
-                "VALUES (?,?,?,?,?,?,?)",
-                (
-                    name or "Anonymous",
-                    email,
-                    city,
-                    str(date),
-                    str(time_val),
-                    reason,
-                    datetime.utcnow().isoformat(),
-                ),
-            )
-            conn.commit()
-            st.success(
-                "Appointment requested — provisional booking saved. "
-                "A clinic admin can now see it below."
-            )
+            if not name.strip():
+                st.error("Please enter your name.")
+            elif not is_valid_email(email):
+                st.error("Please enter a valid email address.")
+            else:
+                c.execute(
+                    "INSERT INTO bookings (name,email,city,date,time,reason,created_at) "
+                    "VALUES (?,?,?,?,?,?,?)",
+                    (
+                        name.strip(),
+                        email.strip(),
+                        city.strip(),
+                        str(date),
+                        str(time_val),
+                        reason.strip() or "Skin consultation",
+                        datetime.utcnow().isoformat(),
+                    ),
+                )
+                conn.commit()
+                st.success(
+                    "Appointment requested — provisional booking saved. "
+                    "A clinic admin can now see it below."
+                )
 
     st.markdown("---")
     st.subheader("Recent appointment requests")
