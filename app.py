@@ -560,6 +560,34 @@ def render_chat():
     if "pending_user_input" not in st.session_state:
         st.session_state.pending_user_input = ""
 
+    # ----- GLASS CARD CSS -----
+    st.markdown("""
+    <style>
+    .glass-box {
+        background: rgba(255,255,255,0.55);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-radius: 18px;
+        padding: 18px 20px;
+        margin: 10px 0 20px 0;
+        box-shadow: 0 12px 35px rgba(0,0,0,0.08);
+        border: 1px solid rgba(255,255,255,0.6);
+    }
+    .warn-box {
+        background: rgba(255,220,220,0.55);
+        border-left: 4px solid #d40000;
+        border-radius: 14px;
+        padding: 12px 16px;
+        margin: 15px 0;
+        backdrop-filter: blur(14px);
+        color: #5c1f1f;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # ------------------------------------------------------------
+    # Chat bubble container
+    # ------------------------------------------------------------
     with st.container():
         st.markdown('<div class="chat-card">', unsafe_allow_html=True)
 
@@ -592,8 +620,9 @@ def render_chat():
                 st.session_state.pending_user_input = text
                 st.session_state.chat_input = ""
 
-        # ---------- Input + buttons ----------
+        # Input + buttons
         st.text_input("You:", key="chat_input")
+
         col1, col2 = st.columns([1, 1])
         with col1:
             st.button("Send", key="chat_send", on_click=handle_send)
@@ -610,14 +639,14 @@ def render_chat():
             # Trim extremely long messages
             if len(user_text) > 2000:
                 user_text = user_text[:2000]
-                st.info("Your message was quite long, so I trimmed it slightly to process it.")
+                st.info("Your message was long, so I trimmed it slightly.")
 
             append_message("user", user_text)
 
-            # ------------ Build messages ------------
+            # Build messages for AI
             messages = build_chat_messages()
 
-            # ------------ Severe keyword detection ------------
+            # Severe keyword detection
             if detect_severe_keywords(user_text):
                 warn = (
                     "I noticed words like pain, pus, fever or rapid spreading. "
@@ -627,26 +656,17 @@ def render_chat():
                 append_message("assistant", warn)
                 messages.append({"role": "assistant", "content": warn})
 
-            # ------------ API Call ------------
-            with st.spinner("Thinking about your skin routine…"):
+            # API Call
+            with st.spinner("Thinking about your routine…"):
                 reply_text, err = call_openrouter_chat(messages)
 
-            # ==========================================================
-            # JSON PARSING LOGIC
-            # ==========================================================
+            # JSON Parsing
             if err:
                 fallback = {
                     "summary": "Basic routine due to connection issue.",
-                    "am_routine": [
-                        "Use a gentle cleanser",
-                        "Apply moisturizer",
-                        "Use broad-spectrum sunscreen"
-                    ],
-                    "pm_routine": [
-                        "Cleanse again",
-                        "Apply a simple moisturizer"
-                    ],
-                    "diy": ["Patch test all home remedies first"],
+                    "am_routine": ["Gentle cleanser", "Moisturizer", "Sunscreen"],
+                    "pm_routine": ["Cleanse", "Moisturizer"],
+                    "diy": ["Patch test everything first"],
                     "caution": "If symptoms worsen, see a dermatologist."
                 }
                 st.session_state.last_plan = fallback
@@ -654,15 +674,13 @@ def render_chat():
                 st.warning(err)
 
             else:
-                # --- Try parsing JSON ---
                 try:
                     parsed = json.loads(reply_text)
                     st.session_state.last_plan = parsed
                     append_message("assistant", "Routine generated ✔️")
                 except:
-                    # AI failed to send JSON → fallback
                     fallback = {
-                        "summary": "Could not parse structured routine, showing raw text.",
+                        "summary": "Could not parse JSON. Showing raw text.",
                         "am_routine": [],
                         "pm_routine": [],
                         "diy": [],
@@ -670,25 +688,68 @@ def render_chat():
                         "raw_text": reply_text
                     }
                     st.session_state.last_plan = fallback
-                    append_message(
-                        "assistant",
-                        "I couldn't format a full routine, but here’s the raw advice:"
-                    )
+                    append_message("assistant", "Could not format routine — showing raw text.")
 
         # ==========================================================
-        # SHOW ROUTINE → TEXT DOWNLOAD
+        # SHOW ROUTINE AS GLASS CARDS (NEW)
         # ==========================================================
-        if st.session_state.last_plan:
-            as_text = json.dumps(st.session_state.last_plan, indent=2)
+        plan = st.session_state.get("last_plan")
+
+        if plan:
+            # Summary
+            if "summary" in plan:
+                st.markdown(f"""
+                    <div class="glass-box">
+                        <h4 style="margin:0;color:#381b2f;">💗 Summary</h4>
+                        <p style="color:#4a243d;">{plan['summary']}</p>
+                    </div>
+                """, unsafe_allow_html=True)
+
+            # AM Routine
+            if "am_routine" in plan and plan["am_routine"]:
+                am_html = "".join([f"<li>{step}</li>" for step in plan["am_routine"]])
+                st.markdown(f"""
+                    <div class="glass-box">
+                        <h4 style="margin:0;color:#381b2f;">🌞 AM Routine</h4>
+                        <ul style="color:#4a243d;">{am_html}</ul>
+                    </div>
+                """, unsafe_allow_html=True)
+
+            # PM Routine
+            if "pm_routine" in plan and plan["pm_routine"]:
+                pm_html = "".join([f"<li>{step}</li>" for step in plan["pm_routine"]])
+                st.markdown(f"""
+                    <div class="glass-box">
+                        <h4 style="margin:0;color:#381b2f;">🌙 PM Routine</h4>
+                        <ul style="color:#4a243d;">{pm_html}</ul>
+                    </div>
+                """, unsafe_allow_html=True)
+
+            # DIY
+            if "diy" in plan and plan["diy"]:
+                diy_html = "".join([f"<li>{step}</li>" for step in plan["diy"]])
+                st.markdown(f"""
+                    <div class="glass-box">
+                        <h4 style="margin:0;color:#381b2f;">🧴 DIY Care</h4>
+                        <ul style="color:#4a243d;">{diy_html}</ul>
+                    </div>
+                """, unsafe_allow_html=True)
+
+            # Caution
+            if "caution" in plan and plan["caution"]:
+                st.markdown(f"""
+                    <div class="warn-box">
+                        ⚠️ {plan['caution']}
+                    </div>
+                """, unsafe_allow_html=True)
+
+            # Download
             st.download_button(
                 "⬇️ Download routine (.txt)",
-                data=as_text,
+                data=json.dumps(plan, indent=2),
                 file_name="skinsync_routine.txt",
                 mime="text/plain",
             )
-
-            with st.expander("📌 View structured routine"):
-                st.json(st.session_state.last_plan)
 
         # ==========================================================
         # SAVE CONSULT
