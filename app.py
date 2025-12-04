@@ -253,7 +253,28 @@ def append_message(role: str, text: str):
 def build_system_prompt():
     p = st.session_state.profile
     return f"""
-You are SkinSync, a friendly but responsible AI dermatology assistant.
+You are SkinSync, a friendly and responsible AI skincare assistant.
+
+Your output must ALWAYS be a valid JSON object with this exact structure:
+
+{{
+  "summary": "",
+  "am_routine": [],
+  "pm_routine": [],
+  "diy": [],
+  "caution": ""
+}}
+
+Rules for generating JSON:
+- ALL fields must exist exactly as shown.
+- NO text is allowed outside the JSON.
+- Content must be plain text only (no markdown, no emojis).
+- AM/PM routines should be moderately detailed (4–6 steps).
+- Summary must be 1–2 sentences.
+- DIY: give 1–2 safe home-care packs with frequency.
+- Caution: fill ONLY if user mentions pain, bleeding, pus, fever, spreading, infection.
+- Never diagnose or claim certainty.
+- Assume user is in India/Asia unless stated.
 
 User profile:
 - Name: {p.get('name') or 'User'}
@@ -261,23 +282,7 @@ User profile:
 - Skin type: {p.get('skin_type')}
 - Main concern: {p.get('main_concern')}
 - Sensitivity: {p.get('sensitivity')}
-- Location (approx): {p.get('location') or 'not specified'}
-
-Your goals:
-- Ask gentle follow-up questions about the user's skin, lifestyle and routine.
-- Give evidence-informed, simple skincare suggestions.
-- Provide clear AM and PM routines, and suggest 1-2 DIY face packs with safe ingredients.
-- Always be cautious: you are NOT a doctor, cannot diagnose, and must recommend in-person dermatology for severe / painful / rapidly worsening symptoms.
-- Be warm, supportive, and concise. Use bullet points and headings where helpful.
-- Assume user is in India/Asia unless specified; mention if actives may be irritating or need sunscreen.
-- Never guarantee cures or medical outcomes.
-- Try to structure your final answer like:
-
-  1. Short summary of main issues
-  2. 🌞 Morning routine (stepwise)
-  3. 🌙 Night routine (stepwise)
-  4. 🧴 1–2 DIY / home-care packs (with frequency)
-  5. ⚠️ Caution / when to see a dermatologist
+- Location: {p.get('location') or 'not specified'}
 """
 
 def build_chat_messages():
@@ -617,7 +622,7 @@ def render_chat():
 
             append_message("user", user_text)
 
-            # ------------ Build messages (with trimming) ------------
+            # ------------ Build messages ------------
             messages = build_chat_messages()
 
             # ------------ Severe keyword detection ------------
@@ -631,33 +636,86 @@ def render_chat():
                 messages.append({"role": "assistant", "content": warn})
 
             # ------------ API Call with spinner ------------
-            with st.spinner("Thinking about your skin routine…"):
+            with st.spinner("Thinking about your routine…"):
                 reply_text, err = call_openrouter_chat(messages)
 
+            # ------------ JSON Parse + fallback ------------
             if err:
                 fallback = (
-                    "I couldn't contact the AI engine right now, but based on what you said "
+                    "I couldn't contact the AI service right now, but based on what you said "
                     "I suggest keeping your routine simple: gentle cleanser, moisturizer and sunscreen. "
                     "Introduce actives slowly and always patch test first."
                 )
                 append_message("assistant", fallback)
-                st.session_state.last_plan = fallback
+                st.session_state.last_plan = {"summary": fallback}
                 st.warning(err)
             else:
-                append_message("assistant", reply_text)
-                st.session_state.last_plan = reply_text
+                import json
+                try:
+                    data = json.loads(reply_text)
+                    st.session_state.last_plan = data
+                    append_message("assistant", "Your personalised routine is ready! Scroll below 💗")
+                except:
+                    st.session_state.last_plan = {"summary": reply_text}
+                    append_message("assistant", reply_text)
 
-        # ---------- Download latest routine ----------
-        if st.session_state.last_plan:
-            st.download_button(
-                "⬇️ Download routine (.txt)",
-                data=st.session_state.last_plan,
-                file_name="skinsync_routine.txt",
-                mime="text/plain",
-            )
+        # ==========================================================
+        # RENDER LAVENDER GLASS CARDS
+        # ==========================================================
+        def render_glass_card(title, content_list):
+            st.markdown(f"""
+            <div style="
+                background: rgba(255, 255, 255, 0.55);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                border-radius: 18px;
+                padding: 18px 20px;
+                margin-top: 12px;
+                box-shadow: 0 12px 35px rgba(0,0,0,0.08);
+                border: 1px solid rgba(255,255,255,0.6);
+            ">
+              <h4 style="margin:0 0 6px 0; color:#381b2f;">{title}</h4>
+              <ul style="color:#4a243d;">
+                {''.join([f"<li>{step}</li>" for step in content_list])}
+              </ul>
+            </div>
+            """, unsafe_allow_html=True)
 
-            with st.expander("📌 View latest routine snapshot"):
-                st.markdown(st.session_state.last_plan)
+        def render_warning_box(text):
+            st.markdown(f"""
+            <div style="
+                background: rgba(255, 220, 220, 0.55);
+                border-left: 4px solid #d40000;
+                backdrop-filter: blur(14px);
+                border-radius: 14px;
+                padding: 12px 16px;
+                margin-top: 12px;
+                color:#5c1f1f;
+            ">
+            ⚠️ {text}
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Show the new cards
+        plan = st.session_state.last_plan
+
+        if isinstance(plan, dict):
+            if plan.get("summary"):
+                st.markdown(f"### 💗 Summary\n{plan['summary']}")
+
+            if plan.get("am_routine"):
+                render_glass_card("🌞 AM Routine", plan["am_routine"])
+
+            if plan.get("pm_routine"):
+                render_glass_card("🌙 PM Routine", plan["pm_routine"])
+
+            if plan.get("diy"):
+                render_glass_card("🧴 DIY Care", plan["diy"])
+
+            if plan.get("caution"):
+                render_warning_box(plan["caution"])
+        else:
+            st.write(plan)  # fallback
 
         # ---------- Save consult ----------
         if save_clicked:
