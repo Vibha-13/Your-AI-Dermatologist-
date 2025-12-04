@@ -107,189 +107,65 @@ st.markdown(
 )
 
 # ---------- GLOBAL STYLES (ROSY / LAVENDER AESTHETIC) ----------
-st.markdown(
-    """
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+st.markdown("""
+<style>
 
-    .stApp {
-        background: linear-gradient(
-            180deg,
-            #fffdfd 0%,
-            #fff7fb 30%,
-            #feeef7 65%,
-            #fbe5f1 100%
-        );
-    }
+.stApp {
+    background: linear-gradient(180deg,#fffdfd 0%,#fff7fb 30%,#feeef7 65%,#fbe5f1 100%);
+}
 
-    /* Page fade-in */
-    .page-container {
-        animation: fadeInUp 0.3s ease-out;
-    }
-    @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(8px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
+/* GLASS PREMIUM CARD */
+.premium-card {
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 22px;
+    padding: 20px 26px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.10);
+    transition: all 0.25s ease;
+}
 
-    /* Hero */
-    .hero-title {
-        font-size: 34px;
-        font-weight: 700;
-        letter-spacing: 0.07em;
-        color: #251320;
-        text-align: center;
-        margin-bottom: 0.1rem;
-    }
-    .hero-sub {
-        text-align: center;
-        color: #8a6a7f;
-        font-size: 12px;
-        letter-spacing: 0.22em;
-        text-transform: uppercase;
-    }
+.premium-card:hover {
+    transform: translateY(-5px) scale(1.01);
+    background: rgba(255, 240, 255, 0.6);
+    border-color: #e3c6ff;
+    box-shadow: 0 26px 60px rgba(0, 0, 0, 0.16);
+}
 
-    /* Feature grid & cards */
-    .feature-grid {
-        max-width: 900px;
-        margin: 2.3rem auto 1.6rem auto;
-    }
-    .card-link {
-        text-decoration: none;
-        color: inherit;
-    }
-    .premium-card {
-        background: linear-gradient(
-            135deg,
-            rgba(255,255,255,0.98),
-            rgba(255,246,252,0.99)
-        );
-        border-radius: 22px;
-        padding: 18px 22px;
-        border: 1px solid rgba(255,255,255,0.9);
-        box-shadow: 0 18px 40px rgba(0,0,0,0.08);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        transition: transform 0.18s ease-out,
-                    box-shadow 0.18s ease-out,
-                    border-color 0.18s ease-out,
-                    background 0.18s ease-out;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-    .premium-card:hover {
-        transform: translateY(-4px) scale(1.01);
-        box-shadow: 0 26px 60px rgba(0,0,0,0.18);
-        border-color: #f1b9d3;
-        background: linear-gradient(
-            140deg,
-            rgba(255,255,255,1),
-            rgba(255,242,249,1)
-        );
-    }
-    .card-header-line {
-        font-size: 15px;
-        font-weight: 600;
-        color: #2f1a29;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .card-emoji {
-        font-size: 20px;
-    }
-    .card-subtitle {
-        font-size: 13px;
-        color: #8b6c80;
-    }
+/* LAVENDER BUTTONS */
+.stButton > button {
+    background-color: #eadcff !important;
+    color: #3a0030 !important;
+    border-radius: 25px !important;
+    border: 1px solid #d6c0f5 !important;
+    font-weight: 600 !important;
+    padding: 0.45rem 1.2rem !important;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+}
 
-    /* Chat card & bubbles */
-    .chat-card {
-        background: rgba(255,255,255,0.98);
-        border-radius: 18px;
-        padding: 18px 22px;
-        box-shadow: 0 12px 30px rgba(0,0,0,0.07);
-        max-width: 780px;
-        margin: 1.5rem auto;
-        backdrop-filter: blur(18px);
-        border: 1px solid rgba(255,255,255,0.9);
-    }
-    .derm-bubble {
-        background: #ffffff;
-        padding: 12px 16px;
-        border-radius: 14px;
-        margin-bottom: 8px;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.05);
-        color: #251320 !important;
-    }
-    .user-bubble {
-        background: #fbe3f4;
-        padding: 12px 16px;
-        border-radius: 14px;
-        margin-bottom: 8px;
-        margin-left: 40px;
-        color: #251320 !important;
-    }
+.stButton > button:hover {
+    background-color: #d8c1ff !important;
+}
 
-    /* Back button */
-    .back-button-container {
-        max-width: 780px;
-        margin: 0.6rem auto 0 auto;
-    }
-    .back-button-container button {
-        background: #ffffff !important;
-        border-radius: 999px !important;
-        border: 1px solid rgba(222,174,203,0.9) !important;
-        font-size: 13px;
-        color: #7f556f !important;
-        padding: 4px 16px !important;
-        box-shadow: 0 8px 18px rgba(0,0,0,0.06);
-    }
+/* Chat bubbles */
+.derm-bubble {
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(12px);
+    border-radius: 14px;
+    padding: 12px 16px;
+}
 
-    /* Optional: make input text black so it's clearly visible */
-    .stTextInput input {
-        color: black !important;
-    }
+.user-bubble {
+    background: rgba(248,220,250,0.75);
+    backdrop-filter: blur(12px);
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-left: 40px;
+}
 
-    /* Inputs & buttons */
-    input, textarea, .stTextInput, .stTextArea {
-        color: #251320 !important;
-    }
-    .stTextInput > div > div > input,
-    .stTextArea > div > textarea {
-        background: #ffffff !important;
-        color: #251320 !important;
-        border-radius: 14px !important;
-        border: 1px solid #edd3e4 !important;
-    }
-    ::placeholder {
-        color: #a27d98 !important;
-        opacity: 1 !important;
-    }
-    .stTextInput label, .stTextArea label {
-        color: #5c3b52 !important;
-    }
-
-    /* Unified Button Styling — Light Lavender Aesthetic */
-    .stButton > button {
-        background-color: #eadcff !important;   /* soft lavender */
-        color: #3a0030 !important;              /* deep plum text */
-        border-radius: 25px !important;
-        font-weight: 600 !important;
-        border: 1px solid #d6c0f5 !important;   /* subtle lavender border */
-        padding: 0.45rem 1.2rem !important;
-        font-size: 14px !important;
-        box-shadow: 0 8px 18px rgba(0,0,0,0.08);
-    }
-    .stButton > button:hover {
-        background-color: #d8c1ff !important;   /* slightly darker hover */
-        color: #2a0025 !important;
-    }
-
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+</style>
+""", unsafe_allow_html=True)
 
 # ========== DB SETUP ==========
 
@@ -534,8 +410,8 @@ with st.sidebar:
     )
     p["location"] = st.text_input("Location (city, optional)", value=p["location"])
     st.session_state.profile = p
-
     st.markdown("---")
+    
     st.markdown(
         "⚕️ **Important:** SkinSync gives educational skincare guidance only, "
         "not medical diagnosis or treatment."
