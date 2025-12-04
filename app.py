@@ -802,82 +802,123 @@ colour channels, normalization, and severity mapping.
 def render_history():
     render_back_to_home()
     st.markdown('<div class="page-container">', unsafe_allow_html=True)
-    st.markdown("### 📋 Consult History")
+    st.markdown("### 📋 Consult History (Your Skin Timeline)", unsafe_allow_html=True)
 
+    # Load last 100 consults
     df = pd.read_sql_query(
         "SELECT id, session_id, data, created_at FROM consults ORDER BY id DESC LIMIT 100",
         conn,
     )
+
     if df.empty:
-        st.info("No consults saved yet. After a chat, click 'Save consult' to store one.")
+        st.info("No consults saved yet — after a chat, click 'Save consult' to store one.")
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    skin_types = []
-    concerns = []
-
+    # Parse all consults
+    parsed_entries = []
     for _, row in df.iterrows():
         try:
             data = json.loads(row["data"])
-            prof = data.get("profile", {})
-            skin_types.append(prof.get("skin_type", "Unknown"))
-            concerns.append(prof.get("main_concern", "Unknown"))
-        except Exception:
-            skin_types.append("Unknown")
-            concerns.append("Unknown")
+            parsed_entries.append({
+                "id": row["id"],
+                "created_at": row["created_at"],
+                "profile": data.get("profile", {}),
+                "plan": data.get("last_plan", {}),
+                "convo": data.get("conversation", []),
+            })
+        except:
+            continue
 
-    df["skin_type"] = skin_types
-    df["main_concern"] = concerns
+    # Timeline renderer
+    st.markdown("""
+    <style>
+        .timeline-dot {
+            width: 12px;
+            height: 12px;
+            background: #c186db;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .glass-box {
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 18px;
+            padding: 18px 20px;
+            margin: 10px 0 20px 0;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.08);
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
-    unique_skin = ["(all)"] + sorted(set(skin_types))
-    unique_concern = ["(all)"] + sorted(set(concerns))
+    def render_glass_section(title, items):
+        st.markdown(f"""
+        <div class="glass-box">
+            <h4 style="margin-top:0;color:#381b2f;">{title}</h4>
+            <ul style="color:#4a243d;">
+                {''.join([f"<li>{i}</li>" for i in items])}
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
-    colf1, colf2 = st.columns(2)
-    with colf1:
-        filter_skin = st.selectbox("Filter by skin type", unique_skin)
-    with colf2:
-        filter_concern = st.selectbox("Filter by concern", unique_concern)
+    def render_warning(text):
+        st.markdown(f"""
+        <div style="
+            background: rgba(255, 220, 220, 0.55);
+            border-left: 4px solid #d40000;
+            backdrop-filter: blur(14px);
+            border-radius: 14px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            color:#5c1f1f;
+        ">
+        ⚠️ {text}
+        </div>
+        """, unsafe_allow_html=True)
 
-    filtered = df.copy()
-    if filter_skin != "(all)":
-        filtered = filtered[filtered["skin_type"] == filter_skin]
-    if filter_concern != "(all)":
-        filtered = filtered[filtered["main_concern"] == filter_concern]
+    # ---- DISPLAY EACH CONSULT AS A TIMELINE ENTRY ----
+    for entry in parsed_entries:
+        date = entry["created_at"][:10]
+        profile = entry["profile"]
+        plan = entry["plan"]
 
-    st.markdown("#### Saved consults")
-    st.dataframe(
-        filtered[["id", "skin_type", "main_concern", "created_at"]],
-        use_container_width=True,
-    )
+        st.markdown(f"""
+        <p>
+            <span class="timeline-dot"></span>
+            <strong>{date}</strong> — {profile.get('main_concern', 'Consultation')}
+        </p>
+        """, unsafe_allow_html=True)
 
-    ids = filtered["id"].tolist()
-    if ids:
-        selected_id = st.selectbox("View full consult by ID", ids)
-    else:
-        selected_id = None
+        # Summary
+        if isinstance(plan, dict) and plan.get("summary"):
+            st.markdown(f"""
+            <div class="glass-box">
+                <h4 style="margin-top:0;color:#381b2f;">💗 Summary</h4>
+                <p style="color:#4a243d;">{plan['summary']}</p>
+            </div>
+            """, unsafe_allow_html=True)
 
-    if selected_id:
-        row = df[df["id"] == selected_id].iloc[0]
-        try:
-            data = json.loads(row["data"])
-            prof = data.get("profile", {})
-            convo = data.get("conversation", [])
-            last_plan = data.get("last_plan", "")
+        # AM Routine
+        if isinstance(plan, dict) and plan.get("am_routine"):
+            render_glass_section("🌞 AM Routine", plan["am_routine"])
 
-            first_user = next((m["text"] for m in convo if m["role"] == "user"), "")
+        # PM Routine
+        if isinstance(plan, dict) and plan.get("pm_routine"):
+            render_glass_section("🌙 PM Routine", plan["pm_routine"])
 
-            st.markdown("#### 🧑‍⚕️ Snapshot")
-            st.write(f"**User:** {prof.get('name') or 'Unknown'}")
-            st.write(f"**Skin type:** {prof.get('skin_type')} · **Concern:** {prof.get('main_concern')}")
-            st.write(f"**Created at:** {row['created_at']}")
+        # DIY Care
+        if isinstance(plan, dict) and plan.get("diy"):
+            render_glass_section("🧴 DIY Care", plan["diy"])
 
-            st.markdown("#### 💬 First message")
-            st.write(first_user or "_(empty)_")
+        # Caution
+        if isinstance(plan, dict) and plan.get("caution"):
+            if plan["caution"].strip():
+                render_warning(plan["caution"])
 
-            st.markdown("#### 🧴 Saved routine / plan")
-            st.write(last_plan or "_No plan stored._")
-        except Exception:
-            st.write(row["data"][:500])
+        st.markdown("<hr style='opacity:0.25;'>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
