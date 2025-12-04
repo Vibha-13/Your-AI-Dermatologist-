@@ -705,148 +705,109 @@ def render_home():
 
 
 def render_chat():
-    # Top nav
     render_back_to_home()
     st.markdown('<div class="page-container">', unsafe_allow_html=True)
     st.markdown("### 🩺 AI Derm Chat", unsafe_allow_html=True)
 
-    # --------- CONSENT CHECK ---------
     if not st.session_state.consent:
-        st.warning(
-            "Please confirm in the left sidebar that you understand SkinSync is not a doctor "
-            "before using the AI chat."
-        )
+        st.warning("Please confirm consent in the sidebar to use SkinSync.")
         return
 
-    # Small profile line
     prof = st.session_state.profile
     st.markdown(
         f"<p style='font-size:12px;opacity:0.8;'>"
-        f"Profile: <strong>{prof.get('skin_type')}</strong> skin · "
-        f"{prof.get('main_concern')} · sensitivity: {prof.get('sensitivity')}</p>",
+        f"<strong>{prof['skin_type']}</strong> skin · {prof['main_concern']} · "
+        f"sensitivity: {prof['sensitivity']}"
+        f"</p>",
         unsafe_allow_html=True,
     )
 
-    # ---------- chat state keys ----------
-    if "pending_user_input" not in st.session_state:
-        st.session_state.pending_user_input = ""
-
+    # ============= 1️⃣ Chat Card Container =============
     with st.container():
         st.markdown('<div class="chat-card">', unsafe_allow_html=True)
 
-        # ---------- First message ----------
+        # Seed assistant message
         if not st.session_state.messages:
             append_message(
                 "assistant",
-                "Hi, I’m your SkinSync AI skincare assistant 🌿\n\n"
-                "Tell me about your skin today — your main concern, how long it's been there, "
-                "and what products you use. I’ll help you build a gentle AM/PM routine."
+                "Hi, I’m your SkinSync assistant 🌿\n"
+                "Tell me about your skin today..."
             )
 
-        # ---------- Show conversation ----------
+        # ============= 2️⃣ Show Messages =============
         for m in st.session_state.messages:
-            if m["role"] == "assistant":
-                st.markdown(
-                    f"<div class='derm-bubble'><strong>Derm</strong>: {m['text']}</div>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown(
-                    f"<div class='user-bubble'><strong>You</strong>: {m['text']}</div>",
-                    unsafe_allow_html=True,
-                )
+            bubble = 'derm-bubble' if m["role"] == "assistant" else 'user-bubble'
+            speaker = "Derm" if m["role"] == "assistant" else "You"
+            st.markdown(
+                f"<div class='{bubble}'><strong>{speaker}</strong>: {m['text']}</div>",
+                unsafe_allow_html=True,
+            )
 
-        # Anchor for auto-scroll
         st.markdown("<div id='chat-end'></div>", unsafe_allow_html=True)
 
-        # ==========================================================
-        #            🚀 NEW CHAT INPUT (WHATSAPP-SMOOTH)
-        # ==========================================================
+        # ============= 3️⃣ The FIX: Chat Input at TOP of UI Rerun =============
         with st.form("chat_form", clear_on_submit=True):
             user_text = st.text_input(
                 "Type your message…",
                 key="chat_input_form",
-                placeholder="Tell me about your skin today...",
+                placeholder="Tell me about your skin...",
             )
-            sent = st.form_submit_button("Send")
+            submitted = st.form_submit_button("Send")
 
-        # Process message once
-        if sent and user_text.strip():
-            st.session_state.pending_user_input = user_text.strip()
-            append_message("user", user_text.strip())
+        # → Process instantly
+        if submitted and user_text.strip():
+            text = user_text.strip()
+            st.session_state.pending_user_input = text
+            append_message("user", text)
 
-        # Auto-scroll JS
-        scroll_js = """
-        <script>
-        var chatEnd = document.getElementById("chat-end");
-        if (chatEnd) {
-            chatEnd.scrollIntoView({behavior: "smooth"});
-        }
-        </script>
-        """
-        st.markdown(scroll_js, unsafe_allow_html=True)
+        # Auto-scroll
+        st.markdown(
+            """
+            <script>
+            var chatEnd = document.getElementById("chat-end");
+            if (chatEnd) { chatEnd.scrollIntoView({behavior: "smooth"}); }
+            </script>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        # ==========================================================
-        # PROCESS USER MESSAGE WITH AI
-        # ==========================================================
+        # ============= 4️⃣ AI Processing =============
         if st.session_state.pending_user_input:
             user_text = st.session_state.pending_user_input
             st.session_state.pending_user_input = ""
 
-            # Trim extremely long messages
-            if len(user_text) > 2000:
-                user_text = user_text[:2000]
-                st.info("Your message was quite long, so I trimmed it slightly to process it.")
-
-            # Build messages (with history trimming)
             messages = build_chat_messages()
 
-            # Severe keyword check
             if detect_severe_keywords(user_text):
-                warn = (
-                    "I noticed words like pain, pus, fever or rapid spreading. "
-                    "This can be serious. I can give gentle skin-care tips, "
-                    "but please consider seeing an in-person dermatologist soon. 🧑‍⚕️"
-                )
+                warn = ("I noticed concerning symptoms like pain/pus/fever. "
+                        "Please consider seeing a dermatologist soon ⚠️")
                 append_message("assistant", warn)
                 messages.append({"role": "assistant", "content": warn})
 
-            # API call
-            with st.spinner("Thinking about your skin routine…"):
-                reply_text, err = call_openrouter_chat(messages)
+            with st.spinner("SkinSync is preparing your routine…"):
+                reply, err = call_openrouter_chat(messages)
 
             if err:
-                fallback = (
-                    "I couldn't contact the AI engine right now, but based on what you said "
-                    "I suggest keeping your routine simple: gentle cleanser, moisturizer and sunscreen. "
-                    "Introduce actives slowly and always patch test first."
-                )
+                fallback = "I'm having trouble reaching the AI. Try again shortly 💗"
                 append_message("assistant", fallback)
-                st.session_state.last_plan = fallback
                 st.warning(err)
+                st.session_state.last_plan = fallback
             else:
-                append_message("assistant", reply_text)
-                st.session_state.last_plan = reply_text
+                append_message("assistant", reply)
+                st.session_state.last_plan = reply
 
-        # ---------- Download latest routine ----------
+        # ============= 5️⃣ Save + Download Buttons =============
         if st.session_state.last_plan:
             st.download_button(
-                "⬇️ Download routine (.txt)",
-                data=st.session_state.last_plan,
-                file_name="skinsync_routine.txt",
+                "⬇️ Download routine",
+                st.session_state.last_plan,
+                "routine.txt",
                 mime="text/plain",
             )
 
-            with st.expander("📌 View latest routine snapshot"):
-                st.markdown(st.session_state.last_plan)
-
-        # ---------- Save consult ----------
-        save_clicked = st.button("💾 Save consult")
-        if save_clicked:
-            if st.session_state.last_plan is None:
-                st.warning(
-                    "No consult to save yet — send a message and get at least one AI reply first 🧾"
-                )
+        if st.button("💾 Save consult"):
+            if not st.session_state.last_plan:
+                st.warning("Nothing to save yet.")
             else:
                 payload = {
                     "profile": st.session_state.profile,
@@ -862,7 +823,7 @@ def render_chat():
                     ),
                 )
                 conn.commit()
-                st.success("Consult saved to history ✅")
+                st.success("Saved to history ✨")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
