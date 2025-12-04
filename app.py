@@ -130,7 +130,9 @@ st.markdown("""
     background: linear-gradient(180deg,#fffdfd 0%,#fff7fb 30%,#feeef7 65%,#fbe5f1 100%);
 }
 
-/* GLASS PREMIUM CARD */
+/* -----------------------------------------------------
+   🌸 CARD BASE (GLASS PREMIUM CARD)
+------------------------------------------------------ */
 .premium-card {
     background: rgba(255, 255, 255, 0.45);
     border-radius: 22px;
@@ -139,17 +141,78 @@ st.markdown("""
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     box-shadow: 0 18px 42px rgba(0, 0, 0, 0.10);
+
+    /* Fade-in default (opacity 0 until animation starts) */
+    opacity: 0;
+    animation: cardFadeUp 0.55s ease-out forwards;
+    animation-delay: var(--delay, 0ms);
+
+    position: relative;
+    overflow: hidden;
     transition: all 0.25s ease;
 }
 
+/* -----------------------------------------------------
+   ✨ 1: STAGGER ANIMATION PER CARD
+------------------------------------------------------ */
+.premium-card:nth-child(1) { --delay: 60ms; }
+.premium-card:nth-child(2) { --delay: 130ms; }
+.premium-card:nth-child(3) { --delay: 200ms; }
+.premium-card:nth-child(4) { --delay: 270ms; }
+.premium-card:nth-child(5) { --delay: 340ms; }
+
+/* -----------------------------------------------------
+   ✨ 2: CARD FADE-UP ANIMATION
+------------------------------------------------------ */
+@keyframes cardFadeUp {
+    0% {
+        opacity: 0;
+        transform: translateY(14px) scale(0.98);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* -----------------------------------------------------
+   ✨ 3: SHIMMER HOVER EFFECT
+------------------------------------------------------ */
+.premium-card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(
+        120deg,
+        transparent 0%,
+        rgba(255,255,255,0.25) 50%,
+        transparent 100%
+    );
+    transform: skewX(-20deg);
+    transition: 0.35s;
+}
+
+.premium-card:hover::after {
+    left: 150%;
+    transition: 0.8s ease-out;
+}
+
+/* -----------------------------------------------------
+   ✨ 4: LAVENDER GLOW + SCALE ON HOVER
+------------------------------------------------------ */
 .premium-card:hover {
     transform: translateY(-5px) scale(1.01);
     background: rgba(255, 240, 255, 0.6);
     border-color: #e3c6ff;
-    box-shadow: 0 26px 60px rgba(0, 0, 0, 0.16);
+    box-shadow: 0 28px 65px rgba(255,182,222,0.35);
 }
 
-/* LAVENDER BUTTONS */
+/* -----------------------------------------------------
+   💜 BUTTONS (Lavender aesthetic)
+------------------------------------------------------ */
 .stButton > button {
     background-color: #eadcff !important;
     color: #3a0030 !important;
@@ -158,30 +221,81 @@ st.markdown("""
     font-weight: 600 !important;
     padding: 0.45rem 1.2rem !important;
     box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+    transition: 0.25s ease;
 }
 
 .stButton > button:hover {
     background-color: #d8c1ff !important;
+    transform: translateY(-2px);
 }
 
-/* Chat bubbles */
+/* -----------------------------------------------------
+   🌿 CHAT BUBBLES (Glass look)
+------------------------------------------------------ */
+.derm-bubble,
+.user-bubble {
+    animation: fadeUpSoft 0.35s ease-out;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 14px;
+    padding: 12px 16px;
+}
+
+/* Assistant bubble */
 .derm-bubble {
     background: rgba(255,255,255,0.75);
-    backdrop-filter: blur(12px);
-    border-radius: 14px;
-    padding: 12px 16px;
 }
 
+/* User bubble */
 .user-bubble {
     background: rgba(248,220,250,0.75);
-    backdrop-filter: blur(12px);
+    margin-left: 40px;
+}
+
+/* Small global fade animation */
+@keyframes fadeUpSoft {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* -----------------------------------------------------
+   ✨ GLASS BOXES (Routine sections)
+------------------------------------------------------ */
+.glass-box {
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 18px;
+    padding: 18px 20px;
+    box-shadow: 0 12px 35px rgba(0,0,0,0.08);
+    border: 1px solid rgba(255,255,255,0.6);
+    animation: fadeUpSoft 0.35s ease-out;
+}
+
+.warn-box {
+    background: rgba(255,220,220,0.55);
+    border-left: 4px solid #d40000;
     border-radius: 14px;
     padding: 12px 16px;
-    margin-left: 40px;
+    backdrop-filter: blur(14px);
+    animation: fadeUpSoft 0.35s ease-out;
+}
+
+/* -----------------------------------------------------
+   ✨ 5: Smart Skin Coach Tagline
+------------------------------------------------------ */
+.smart-tagline {
+    text-align: center;
+    font-size: 11px;
+    margin-top: 6px;
+    color: #8b6a82;
+    letter-spacing: 0.11em;
+    animation: fadeUpSoft 0.6s ease-out;
 }
 
 </style>
 """, unsafe_allow_html=True)
+
 
 # ========== DB SETUP ==========
 
@@ -587,6 +701,8 @@ def render_home():
 
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div class='smart-tagline'>Your smarter, gentler skincare companion ✨</div>", unsafe_allow_html=True)
+
 
 def render_chat():
     # Top nav
