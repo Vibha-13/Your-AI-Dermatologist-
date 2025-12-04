@@ -411,7 +411,7 @@ with st.sidebar:
     p["location"] = st.text_input("Location (city, optional)", value=p["location"])
     st.session_state.profile = p
     st.markdown("---")
-    
+
     st.markdown(
         "⚕️ **Important:** SkinSync gives educational skincare guidance only, "
         "not medical diagnosis or treatment."
@@ -874,6 +874,35 @@ def render_appointments():
     else:
         st.dataframe(df, use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
+
+st.markdown("""
+<style>
+
+/* FORCE GLASS + LAVENDER FOR HOME PAGE CARDS */
+.premium-card {
+    background: rgba(255, 255, 255, 0.45) !important;
+    border-radius: 22px !important;
+    padding: 22px 26px !important;
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    box-shadow: 0 18px 42px rgba(0,0,0,0.12) !important;
+    transition: all 0.25s ease !important;
+}
+
+.premium-card:hover {
+    transform: translateY(-5px) scale(1.01) !important;
+    background: rgba(255, 240, 255, 0.55) !important;
+    border-color: #e3c6ff !important;
+    box-shadow: 0 26px 60px rgba(0,0,0,0.18) !important;
+}
+
+.premium-card * {
+    color: #2f1a29 !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 # ========== ROUTING ==========
 page = st.session_state.page
