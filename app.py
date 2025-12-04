@@ -105,6 +105,22 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+st.markdown(
+    """
+    <style>
+    /* Simple fade/slide animation */
+    @keyframes fadeUpSoft {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .derm-bubble, .user-bubble, .glass-box, .warn-box {
+        animation: fadeUpSoft 0.35s ease-out;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 # ---------- GLOBAL STYLES (ROSY / LAVENDER AESTHETIC) ----------
 st.markdown("""
@@ -192,6 +208,7 @@ c.execute(
         created_at TEXT
     )"""
 )
+
 c.execute(
     """CREATE TABLE IF NOT EXISTS consults (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -200,7 +217,21 @@ c.execute(
         created_at TEXT
     )"""
 )
+c.execute(
+    """CREATE TABLE IF NOT EXISTS diary (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entry_date TEXT,
+        mood TEXT,
+        redness INTEGER,
+        oiliness INTEGER,
+        sleep_hours REAL,
+        water_glasses INTEGER,
+        note TEXT,
+        created_at TEXT
+    )"""
+)
 conn.commit()
+
 
 # ========== SESSION STATE ==========
 if "session_id" not in st.session_state:
@@ -526,6 +557,26 @@ def render_home():
             """,
             unsafe_allow_html=True,
         )
+            # Extra row for Skin Diary
+    col5, col6 = st.columns(2)
+    with col5:
+        st.markdown(
+            """
+            <a class="card-link" href="?page=diary">
+              <div class="premium-card">
+                <div class="card-header-line">
+                  <span class="card-emoji">📔</span>
+                  <span>Skin Diary</span>
+                </div>
+                <div class="card-subtitle">
+                  Log how your skin feels, track redness, mood, sleep and hydration over time.
+                </div>
+              </div>
+            </a>
+            """,
+            unsafe_allow_html=True,
+        )
+
 
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
@@ -560,7 +611,7 @@ def render_chat():
     if "pending_user_input" not in st.session_state:
         st.session_state.pending_user_input = ""
 
-    # ----- GLASS CARD CSS -----
+    # ----- GLASS CARD CSS (for chat page) -----
     st.markdown("""
     <style>
     .glass-box {
@@ -620,30 +671,31 @@ def render_chat():
                 st.session_state.pending_user_input = text
                 st.session_state.chat_input = ""
 
-        # Input + buttons
+        # ---------- Input + buttons ----------
         st.text_input("You:", key="chat_input")
 
-        col1, col2 = st.columns([1, 1])
+        col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
             st.button("Send", key="chat_send", on_click=handle_send)
         with col2:
+            regen_clicked = st.button("🔁 Regenerate routine", key="regen_routine")
+        with col3:
             save_clicked = st.button("💾 Save consult", key="save_consult")
 
         # ==========================================================
-        # PROCESS USER MESSAGE
+        # PROCESS USER MESSAGE (NEW MESSAGE)
         # ==========================================================
         if st.session_state.pending_user_input:
             user_text = st.session_state.pending_user_input
             st.session_state.pending_user_input = ""
 
-            # Trim extremely long messages
+            # Trim very long
             if len(user_text) > 2000:
                 user_text = user_text[:2000]
                 st.info("Your message was long, so I trimmed it slightly.")
 
             append_message("user", user_text)
 
-            # Build messages for AI
             messages = build_chat_messages()
 
             # Severe keyword detection
@@ -656,11 +708,9 @@ def render_chat():
                 append_message("assistant", warn)
                 messages.append({"role": "assistant", "content": warn})
 
-            # API Call
             with st.spinner("Thinking about your routine…"):
                 reply_text, err = call_openrouter_chat(messages)
 
-            # JSON Parsing
             if err:
                 fallback = {
                     "summary": "Basic routine due to connection issue.",
@@ -672,7 +722,6 @@ def render_chat():
                 st.session_state.last_plan = fallback
                 append_message("assistant", "Basic fallback routine generated.")
                 st.warning(err)
-
             else:
                 try:
                     parsed = json.loads(reply_text)
@@ -680,7 +729,7 @@ def render_chat():
                     append_message("assistant", "Routine generated ✔️")
                 except:
                     fallback = {
-                        "summary": "Could not parse JSON. Showing raw text.",
+                        "summary": "Could not parse JSON. Showing raw text instead.",
                         "am_routine": [],
                         "pm_routine": [],
                         "diy": [],
@@ -688,16 +737,47 @@ def render_chat():
                         "raw_text": reply_text
                     }
                     st.session_state.last_plan = fallback
-                    append_message("assistant", "Could not format routine — showing raw text.")
+                    append_message("assistant", "I couldn't format a full routine.")
 
         # ==========================================================
-        # SHOW ROUTINE AS GLASS CARDS (NEW)
+        # REGENERATE ROUTINE (NO NEW USER MESSAGE)
+        # ==========================================================
+        if 'regen_trigger' not in st.session_state:
+            st.session_state.regen_trigger = False
+
+        if regen_clicked:
+            # Use last user message to regenerate
+            last_user = None
+            for msg in reversed(st.session_state.messages):
+                if msg["role"] == "user":
+                    last_user = msg["text"]
+                    break
+
+            if last_user:
+                messages = [{"role": "system", "content": build_system_prompt()}]
+                # just last user message to keep it cheap
+                messages.append({"role": "user", "content": last_user})
+                with st.spinner("Regenerating your routine…"):
+                    reply_text, err = call_openrouter_chat(messages)
+
+                if err:
+                    st.warning("Couldn't regenerate right now, please try again.")
+                else:
+                    try:
+                        parsed = json.loads(reply_text)
+                        st.session_state.last_plan = parsed
+                        append_message("assistant", "I’ve regenerated your routine ✔️")
+                    except:
+                        st.info("Regeneration worked, but I couldn't parse it cleanly.")
+
+        # ==========================================================
+        # SHOW ROUTINE AS GLASS CARDS
         # ==========================================================
         plan = st.session_state.get("last_plan")
 
         if plan:
             # Summary
-            if "summary" in plan:
+            if "summary" in plan and plan["summary"]:
                 st.markdown(f"""
                     <div class="glass-box">
                         <h4 style="margin:0;color:#381b2f;">💗 Summary</h4>
@@ -775,6 +855,58 @@ def render_chat():
                 st.success("Consult saved to history ❤️")
 
         st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+def render_diary():
+    render_back_to_home()
+    st.markdown('<div class="page-container">', unsafe_allow_html=True)
+    st.markdown("### 📔 Skin Diary", unsafe_allow_html=True)
+    st.write("Track how your skin feels day by day — great for spotting patterns.")
+
+    today = datetime.today().date()
+
+    with st.form("diary_form"):
+        entry_date = st.date_input("Date", value=today)
+        mood = st.selectbox("Overall mood about your skin today", ["😊 Great", "😌 Okay", "😣 Not good"])
+        redness = st.slider("Redness level", 0, 10, 3)
+        oiliness = st.slider("Oiliness level", 0, 10, 4)
+        sleep_hours = st.number_input("Sleep (hours)", min_value=0.0, max_value=24.0, value=7.0, step=0.5)
+        water_glasses = st.number_input("Water intake (glasses)", min_value=0, max_value=30, value=8, step=1)
+        note = st.text_area("Notes (products used, triggers, improvements, etc.)")
+
+        submitted = st.form_submit_button("Save diary entry")
+        if submitted:
+            c.execute(
+                "INSERT INTO diary (entry_date, mood, redness, oiliness, sleep_hours, water_glasses, note, created_at) "
+                "VALUES (?,?,?,?,?,?,?,?)",
+                (
+                    str(entry_date),
+                    mood,
+                    int(redness),
+                    int(oiliness),
+                    float(sleep_hours),
+                    int(water_glasses),
+                    note.strip(),
+                    datetime.utcnow().isoformat(),
+                ),
+            )
+            conn.commit()
+            st.success("Diary entry saved 🌸")
+
+    st.markdown("---")
+    st.subheader("Recent entries")
+
+    df = pd.read_sql_query(
+        "SELECT entry_date, mood, redness, oiliness, sleep_hours, water_glasses, note "
+        "FROM diary ORDER BY entry_date DESC, id DESC LIMIT 30",
+        conn,
+    )
+
+    if df.empty:
+        st.info("No diary entries yet — start by adding how your skin felt today.")
+    else:
+        st.dataframe(df, use_container_width=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1050,6 +1182,8 @@ elif page == "appointments":
     render_appointments()
 elif page == "history":
     render_history()
+elif page == "diary":
+    render_diary()
 
 st.markdown("---")
 st.caption(
