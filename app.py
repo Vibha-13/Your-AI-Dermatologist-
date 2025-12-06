@@ -710,33 +710,76 @@ def render_chat():
     st.markdown("### 🩺 AI Derm Chat", unsafe_allow_html=True)
 
     if not st.session_state.consent:
-        st.warning("Please confirm consent in the sidebar to use SkinSync.")
+        st.warning("Please confirm consent in the sidebar.")
         return
 
     prof = st.session_state.profile
     st.markdown(
         f"<p style='font-size:12px;opacity:0.8;'>"
-        f"<strong>{prof['skin_type']}</strong> skin · {prof['main_concern']} · "
-        f"sensitivity: {prof['sensitivity']}"
+        f"{prof['skin_type']} skin · {prof['main_concern']} · sensitivity: {prof['sensitivity']}"
         f"</p>",
         unsafe_allow_html=True,
     )
 
-    # ============= 1️⃣ Chat Card Container =============
+    # ============================
+    # 1️⃣ INPUT FORM FIRST (ISOLATED)
+    # ============================
+    with st.form("chat_form", clear_on_submit=True):
+        user_text = st.text_input(
+            "Type your message…",
+            key="chat_input_form",
+            placeholder="Tell me about your skin..."
+        )
+        submitted = st.form_submit_button("Send")
+
+    # Process input IMMEDIATELY
+    if submitted and user_text.strip():
+        text = user_text.strip()
+        append_message("user", text)
+        st.session_state.pending_user_input = text
+
+    # ============================
+    # 2️⃣ PROCESS AI RESPONSE
+    # ============================
+    if st.session_state.pending_user_input:
+        text = st.session_state.pending_user_input
+        st.session_state.pending_user_input = ""
+
+        messages = build_chat_messages()
+
+        if detect_severe_keywords(text):
+            warn = (
+                "I noticed serious symptoms like pain/pus/fever. "
+                "Please see a dermatologist soon ⚠️"
+            )
+            append_message("assistant", warn)
+            messages.append({"role": "assistant", "content": warn})
+
+        with st.spinner("SkinSync is preparing your routine…"):
+            reply, err = call_openrouter_chat(messages)
+
+        if err:
+            fallback = "I'm having trouble connecting right now 💗"
+            append_message("assistant", fallback)
+            st.session_state.last_plan = fallback
+        else:
+            append_message("assistant", reply)
+            st.session_state.last_plan = reply
+
+    # ============================
+    # 3️⃣ NOW SHOW CHAT MESSAGES
+    # ============================
     with st.container():
         st.markdown('<div class="chat-card">', unsafe_allow_html=True)
 
-        # Seed assistant message
         if not st.session_state.messages:
             append_message(
                 "assistant",
-                "Hi, I’m your SkinSync assistant 🌿\n"
-                "Tell me about your skin today..."
+                "Hi, I’m your SkinSync assistant 🌿\nTell me about your skin today..."
             )
 
-        # ============= 2️⃣ Show Messages =============
         for m in st.session_state.messages:
-            bubble = 'derm-bubble' if m["role"] == "assistant" else 'user-bubble'
+            bubble = "derm-bubble" if m["role"] == "assistant" else "user-bubble"
             speaker = "Derm" if m["role"] == "assistant" else "You"
             st.markdown(
                 f"<div class='{bubble}'><strong>{speaker}</strong>: {m['text']}</div>",
@@ -745,85 +788,37 @@ def render_chat():
 
         st.markdown("<div id='chat-end'></div>", unsafe_allow_html=True)
 
-        # ============= 3️⃣ The FIX: Chat Input at TOP of UI Rerun =============
-        with st.form("chat_form", clear_on_submit=True):
-            user_text = st.text_input(
-                "Type your message…",
-                key="chat_input_form",
-                placeholder="Tell me about your skin...",
-            )
-            submitted = st.form_submit_button("Send")
-
-        # → Process instantly
-        if submitted and user_text.strip():
-            text = user_text.strip()
-            st.session_state.pending_user_input = text
-            append_message("user", text)
-
-        # Auto-scroll
-        st.markdown(
-            """
+        st.markdown("""
             <script>
-            var chatEnd = document.getElementById("chat-end");
-            if (chatEnd) { chatEnd.scrollIntoView({behavior: "smooth"}); }
+            var el = document.getElementById("chat-end");
+            if(el){ el.scrollIntoView({behavior:"smooth"}); }
             </script>
-            """,
-            unsafe_allow_html=True,
-        )
+        """, unsafe_allow_html=True)
 
-        # ============= 4️⃣ AI Processing =============
-        if st.session_state.pending_user_input:
-            user_text = st.session_state.pending_user_input
-            st.session_state.pending_user_input = ""
-
-            messages = build_chat_messages()
-
-            if detect_severe_keywords(user_text):
-                warn = ("I noticed concerning symptoms like pain/pus/fever. "
-                        "Please consider seeing a dermatologist soon ⚠️")
-                append_message("assistant", warn)
-                messages.append({"role": "assistant", "content": warn})
-
-            with st.spinner("SkinSync is preparing your routine…"):
-                reply, err = call_openrouter_chat(messages)
-
-            if err:
-                fallback = "I'm having trouble reaching the AI. Try again shortly 💗"
-                append_message("assistant", fallback)
-                st.warning(err)
-                st.session_state.last_plan = fallback
-            else:
-                append_message("assistant", reply)
-                st.session_state.last_plan = reply
-
-        # ============= 5️⃣ Save + Download Buttons =============
+        # Download / Save
         if st.session_state.last_plan:
             st.download_button(
                 "⬇️ Download routine",
                 st.session_state.last_plan,
-                "routine.txt",
-                mime="text/plain",
+                "routine.txt"
             )
 
         if st.button("💾 Save consult"):
-            if not st.session_state.last_plan:
-                st.warning("Nothing to save yet.")
-            else:
-                payload = {
-                    "profile": st.session_state.profile,
-                    "conversation": st.session_state.messages,
-                    "last_plan": st.session_state.last_plan,
-                }
-                c.execute(
-                    "INSERT INTO consults (session_id,data,created_at) VALUES (?,?,?)",
-                    (
-                        st.session_state.session_id,
-                        json.dumps(payload),
-                        datetime.utcnow().isoformat(),
-                    ),
-                )
-                conn.commit()
-                st.success("Saved to history ✨")
+            payload = {
+                "profile": st.session_state.profile,
+                "conversation": st.session_state.messages,
+                "last_plan": st.session_state.last_plan,
+            }
+            c.execute(
+                "INSERT INTO consults (session_id,data,created_at) VALUES (?,?,?)",
+                (
+                    st.session_state.session_id,
+                    json.dumps(payload),
+                    datetime.utcnow().isoformat(),
+                ),
+            )
+            conn.commit()
+            st.success("Saved ✨")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
