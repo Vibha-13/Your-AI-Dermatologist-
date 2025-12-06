@@ -1130,20 +1130,15 @@ def find_last_meaningful_user_message(min_words: int = 3) -> str | None:
     return None
 
 def render_chat_v2():
-    # Top nav
     render_back_to_home()
     st.markdown('<div class="page-container">', unsafe_allow_html=True)
     st.markdown("### 🧠 Smart Skin Coach (Beta)", unsafe_allow_html=True)
 
-    # --------- CONSENT CHECK ---------
     if not st.session_state.consent:
-        st.warning(
-            "Please confirm in the left sidebar that you understand SkinSync is not a doctor "
-            "before using the AI chat."
-        )
+        st.warning("Please confirm consent in the left sidebar before using Smart Skin Coach.")
         return
 
-    # Small profile line
+    # Profile line
     prof = st.session_state.profile
     st.markdown(
         f"<p style='font-size:12px;opacity:0.8;'>"
@@ -1152,278 +1147,150 @@ def render_chat_v2():
         unsafe_allow_html=True,
     )
 
-    # ---------- chat state ----------
-    if "chat_input_v2" not in st.session_state:
-        st.session_state.chat_input_v2 = ""
-
-    if "pending_user_input_v2" not in st.session_state:
-        st.session_state.pending_user_input_v2 = ""
+    # Init states
+    if "messages_v2" not in st.session_state:
+        st.session_state.messages_v2 = []
 
     if "last_plan_v2" not in st.session_state:
         st.session_state.last_plan_v2 = None
 
-    # ----- GLASS CARD CSS (reuse look) -----
-    st.markdown("""
-    <style>
-    .glass-box {
-        background: rgba(255,255,255,0.55);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border-radius: 18px;
-        padding: 18px 20px;
-        margin: 10px 0 20px 0;
-        box-shadow: 0 12px 35px rgba(0,0,0,0.08);
-        border: 1px solid rgba(255,255,255,0.6);
-        animation: fadeUpSoft 0.35s ease-out;
-    }
-    .warn-box {
-        background: rgba(255,220,220,0.55);
-        border-left: 4px solid #d40000;
-        border-radius: 14px;
-        padding: 12px 16px;
-        margin: 15px 0;
-        backdrop-filter: blur(14px);
-        color: #5c1f1f;
-        animation: fadeUpSoft 0.35s ease-out;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    # -------------------------------
+    # 🌟 FORM FIRST (fix double click)
+    # -------------------------------
+    with st.form("beta_form", clear_on_submit=True):
+        user_text = st.text_input(
+            "You:",
+            key="chat_input_v2",
+            placeholder="Tell me about your skin today..."
+        )
+        submitted = st.form_submit_button("Send")
 
-    # ------------------------------------------------------------
-    # Chat bubble container
-    # ------------------------------------------------------------
-    with st.container():
-        st.markdown('<div class="chat-card">', unsafe_allow_html=True)
+    # -------------------------------
+    # 🌟 PROCESS MESSAGE
+    # -------------------------------
+    if submitted and user_text.strip():
+        msg = user_text.strip()
+        st.session_state.messages_v2.append({"role": "user", "text": msg})
 
-        # ---------- First message ----------
-        if not st.session_state.messages:
-            append_message(
-                "assistant",
-                "Hi, I’m your SkinSync Smart Skin Coach 🌿\n\n"
-                "Tell me about your skin — what bothers you the most right now, "
-                "since when, and what products you use. I’ll help you build a gentle routine."
+        # Build messages for API
+        messages = [{"role": "system", "content": build_system_prompt()}]
+        for m in st.session_state.messages_v2[-10:]:
+            role = "assistant" if m["role"] == "assistant" else "user"
+            messages.append({"role": role, "content": m["text"]})
+
+        # Severe check
+        if detect_severe_keywords(msg):
+            warn = (
+                "I noticed painful or severe-sounding symptoms. "
+                "I can give gentle guidance, but please see a dermatologist soon. 🧑‍⚕️"
             )
+            st.session_state.messages_v2.append({"role": "assistant", "text": warn})
+            messages.append({"role": "assistant", "content": warn})
 
-        # ---------- Show conversation history ----------
-        for m in st.session_state.messages:
-            if m["role"] == "assistant":
-                st.markdown(
-                    f"<div class='derm-bubble'><strong>Derm</strong>: {m['text']}</div>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown(
-                    f"<div class='user-bubble'><strong>You</strong>: {m['text']}</div>",
-                    unsafe_allow_html=True,
-                )
+        # API call
+        with st.spinner("Thinking…"):
+            reply, err = call_openrouter_chat(messages)
 
-        # ---------- Send callback ----------
-        def handle_send_v2():
-            text = st.session_state.get("chat_input_v2", "").strip()
-            if text:
-                st.session_state.pending_user_input_v2 = text
-                st.session_state.chat_input_v2 = ""
-
-        # ---------- Input + buttons ----------
-        st.text_input("You:", key="chat_input_v2")
-
-        col1, col2, col3 = st.columns([1, 1, 1])
-        with col1:
-            st.button("Send", key="chat_send_v2", on_click=handle_send_v2)
-        with col2:
-            regen_clicked = st.button("🔁 New variation", key="regen_v2")
-        with col3:
-            save_clicked = st.button("💾 Save consult", key="save_consult_v2")
-
-        # ==========================================================
-        # PROCESS NEW USER MESSAGE
-        # ==========================================================
-        if st.session_state.pending_user_input_v2:
-            user_text = st.session_state.pending_user_input_v2
-            st.session_state.pending_user_input_v2 = ""
-
-            # Trim very long
-            if len(user_text) > 2000:
-                user_text = user_text[:2000]
-                st.info("Your message was long, so I trimmed it slightly.")
-
-            append_message("user", user_text)
-            intent = detect_intent(user_text)
-
-            # --- Handle greetings & small talk without hitting API ---
-            if intent == "greeting" and st.session_state.last_plan_v2 is None:
-                reply = "Hi! 💗 Tell me what’s bothering your skin right now — dryness, acne, redness, anything."
-                append_message("assistant", reply)
-
-            elif intent == "small_talk":
-                reply = "Got it 💫 If anything changes with your skin or products, just tell me and I'll adjust your routine."
-                append_message("assistant", reply)
-
-            else:
-                # Serious enough → build messages for AI
-                messages = build_chat_messages()
-
-                # Severe keyword detection
-                if detect_severe_keywords(user_text):
-                    warn = (
-                        "I noticed words like pain, pus, fever or rapid spreading. "
-                        "This can be serious. I can give gentle skincare tips, "
-                        "but please see an in-person dermatologist soon. 🧑‍⚕️"
-                    )
-                    append_message("assistant", warn)
-                    messages.append({"role": "assistant", "content": warn})
-
-                # If user didn't mention skin details much, also remind model of last meaningful message
-                last_meaningful = find_last_meaningful_user_message()
-                if last_meaningful and last_meaningful != user_text:
-                    messages.append({
-                        "role": "user",
-                        "content": f"Earlier I mentioned: {last_meaningful}"
-                    })
-
-                with st.spinner("Thinking about a gentle routine for you…"):
-                    reply_text, err = call_openrouter_chat(messages)
-
-                if err:
-                    fallback = {
-                        "summary": "Basic routine due to connection issue.",
-                        "am_routine": ["Gentle cleanser", "Moisturizer", "Sunscreen"],
-                        "pm_routine": ["Cleanse", "Moisturizer"],
-                        "diy": ["Patch test everything first"],
-                        "caution": "If symptoms worsen, see a dermatologist."
-                    }
-                    st.session_state.last_plan_v2 = fallback
-                    append_message("assistant", "Basic fallback routine generated.")
-                    st.warning(err)
-                else:
-                    try:
-                        parsed = json.loads(reply_text)
-                        st.session_state.last_plan_v2 = parsed
-                        append_message("assistant", "I’ve created a routine for you ✔️")
-                    except:
-                        fallback = {
-                            "summary": "Could not parse JSON. Showing raw advice instead.",
-                            "am_routine": [],
-                            "pm_routine": [],
-                            "diy": [],
-                            "caution": "",
-                            "raw_text": reply_text
-                        }
-                        st.session_state.last_plan_v2 = fallback
-                        append_message("assistant", "I couldn't format a full routine, but here’s what I suggest.")
-
-        # ==========================================================
-        # REGENERATE / NEW VARIATION (ONLY USING LAST MEANINGFUL MESSAGE)
-        # ==========================================================
-        if regen_clicked:
-            base_text = find_last_meaningful_user_message()
-            if base_text:
-                messages = [
-                    {"role": "system", "content": build_system_prompt()},
-                    {"role": "user", "content": base_text + "\nPlease give a slightly different routine variation than last time."}
-                ]
-                with st.spinner("Creating a fresh variation for you…"):
-                    reply_text, err = call_openrouter_chat(messages)
-
-                if err:
-                    st.warning("Couldn't regenerate right now. Please try again in a bit.")
-                else:
-                    try:
-                        parsed = json.loads(reply_text)
-                        st.session_state.last_plan_v2 = parsed
-                        append_message("assistant", "Here’s a slightly different routine variation ✔️")
-                    except:
-                        st.info("Regenerated, but I couldn’t parse the new routine cleanly.")
-            else:
-                st.warning("Tell me a bit about your skin first, then I can generate a routine 💗")
-
-        # ==========================================================
-        # SHOW ROUTINE AS GLASS CARDS
-        # ==========================================================
-        plan = st.session_state.get("last_plan_v2")
-
-        if plan:
-            # Summary
-            if "summary" in plan and plan["summary"]:
-                st.markdown(f"""
-                    <div class="glass-box">
-                        <h4 style="margin:0;color:#381b2f;">💗 Summary</h4>
-                        <p style="color:#4a243d;">{plan['summary']}</p>
-                    </div>
-                """, unsafe_allow_html=True)
-
-            # AM Routine
-            if "am_routine" in plan and plan["am_routine"]:
-                am_html = "".join([f"<li>{step}</li>" for step in plan["am_routine"]])
-                st.markdown(f"""
-                    <div class="glass-box">
-                        <h4 style="margin:0;color:#381b2f;">🌞 AM Routine</h4>
-                        <ul style="color:#4a243d;">{am_html}</ul>
-                    </div>
-                """, unsafe_allow_html=True)
-
-            # PM Routine
-            if "pm_routine" in plan and plan["pm_routine"]:
-                pm_html = "".join([f"<li>{step}</li>" for step in plan["pm_routine"]])
-                st.markdown(f"""
-                    <div class="glass-box">
-                        <h4 style="margin:0;color:#381b2f;">🌙 PM Routine</h4>
-                        <ul style="color:#4a243d;">{pm_html}</ul>
-                    </div>
-                """, unsafe_allow_html=True)
-
-            # DIY
-            if "diy" in plan and plan["diy"]:
-                diy_html = "".join([f"<li>{step}</li>" for step in plan["diy"]])
-                st.markdown(f"""
-                    <div class="glass-box">
-                        <h4 style="margin:0;color:#381b2f;">🧴 DIY Care</h4>
-                        <ul style="color:#4a243d;">{diy_html}</ul>
-                    </div>
-                """, unsafe_allow_html=True)
-
-            # Caution
-            if "caution" in plan and plan["caution"]:
-                st.markdown(f"""
-                    <div class="warn-box">
-                        ⚠️ {plan['caution']}
-                    </div>
-                """, unsafe_allow_html=True)
-
-            # Download
-            st.download_button(
-                "⬇️ Download routine (.txt)",
-                data=json.dumps(plan, indent=2),
-                file_name="skinsync_smart_routine.txt",
-                mime="text/plain",
-            )
-
-        # ==========================================================
-        # SAVE CONSULT
-        # ==========================================================
-        if save_clicked:
-            if st.session_state.last_plan_v2 is None:
-                st.warning("No consult to save yet — send a message first 🧾")
-            else:
-                payload = {
-                    "profile": st.session_state.profile,
-                    "conversation": st.session_state.messages,
-                    "last_plan": st.session_state.last_plan_v2,
+        # Error fallback
+        if err:
+            fallback = {
+                "summary": "Basic routine due to connection issue.",
+                "am_routine": ["Gentle cleanser", "Moisturizer", "Sunscreen"],
+                "pm_routine": ["Cleanser", "Moisturizer"],
+                "diy": ["Aloe vera", "Honey"],
+                "caution": "If symptoms worsen, see a dermatologist."
+            }
+            st.session_state.last_plan_v2 = fallback
+            st.session_state.messages_v2.append({
+                "role": "assistant",
+                "text": "I generated a basic routine to keep things simple 💗"
+            })
+        else:
+            # Try parsing JSON
+            try:
+                parsed = json.loads(reply)
+                st.session_state.last_plan_v2 = parsed
+                st.session_state.messages_v2.append({
+                    "role": "assistant",
+                    "text": "I created a personalised routine for you ✔️"
+                })
+            except:
+                st.session_state.last_plan_v2 = {
+                    "summary": "Could not parse JSON. Showing raw advice.",
+                    "am_routine": [],
+                    "pm_routine": [],
+                    "diy": [],
+                    "caution": "",
+                    "raw_text": reply
                 }
-                c.execute(
-                    "INSERT INTO consults (session_id,data,created_at) VALUES (?,?,?)",
-                    (
-                        st.session_state.session_id,
-                        json.dumps(payload),
-                        datetime.utcnow().isoformat(),
-                    ),
-                )
-                conn.commit()
-                st.success("Consult saved to history ❤️")
+                st.session_state.messages_v2.append({
+                    "role": "assistant",
+                    "text": "Here’s my skin advice 💗"
+                })
 
-        st.markdown("</div>", unsafe_allow_html=True)
+    # -------------------------------
+    # 🌟 CHAT HISTORY BELOW (correcly placed)
+    # -------------------------------
+    st.markdown('<div class="chat-card">', unsafe_allow_html=True)
+
+    if not st.session_state.messages_v2:
+        st.session_state.messages_v2.append({
+            "role": "assistant",
+            "text": "Hi, I’m your Smart Skin Coach 🌿 Tell me what’s bothering your skin today!"
+        })
+
+    for m in st.session_state.messages_v2:
+        bubble = "derm-bubble" if m["role"] == "assistant" else "user-bubble"
+        speaker = "Coach" if m["role"] == "assistant" else "You"
+        st.markdown(
+            f"<div class='{bubble}'><strong>{speaker}</strong>: {m['text']}</div>",
+            unsafe_allow_html=True
+        )
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+    # -------------------------------
+    # 🌟 ROUTINE CARDS
+    # -------------------------------
+    plan = st.session_state.last_plan_v2
+    if plan:
+        if "summary" in plan:
+            st.markdown(f"""
+                <div class="glass-box">
+                    <h4>💗 Summary</h4>
+                    <p>{plan['summary']}</p>
+                </div>
+            """, unsafe_allow_html=True)
+
+        if "am_routine" in plan and plan["am_routine"]:
+            st.markdown(f"""
+                <div class="glass-box">
+                    <h4>🌞 AM Routine</h4>
+                    <ul>{"".join(f"<li>{x}</li>" for x in plan["am_routine"])}</ul>
+                </div>
+            """, unsafe_allow_html=True)
+
+        if "pm_routine" in plan and plan["pm_routine"]:
+            st.markdown(f"""
+                <div class="glass-box">
+                    <h4>🌙 PM Routine</h4>
+                    <ul>{"".join(f"<li>{x}</li>" for x in plan["pm_routine"])}</ul>
+                </div>
+            """, unsafe_allow_html=True)
+
+        if "diy" in plan and plan["diy"]:
+            st.markdown(f"""
+                <div class="glass-box">
+                    <h4>🧴 DIY Care</h4>
+                    <ul>{"".join(f"<li>{x}</li>" for x in plan["diy"])}</ul>
+                </div>
+            """, unsafe_allow_html=True)
+
+        if "caution" in plan and plan["caution"]:
+            st.markdown(f"""
+                <div class="warn-box">⚠️ {plan['caution']}</div>
+            """, unsafe_allow_html=True)
+
 
 def render_appointments():
     render_back_to_home()
