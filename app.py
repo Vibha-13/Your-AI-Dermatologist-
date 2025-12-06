@@ -372,24 +372,37 @@ def detect_intent(text: str):
 
     t = text.lower().strip()
 
-    greetings = [
-        "hi", "hii", "hiii", "hello", "hey", "heyy", "helo",
-        "hlo", "yo", "hola", "namaste", "hie"
+    # Pure greetings — single words or very short ones
+    greeting_words = [
+        "hi", "hii", "hiii", "hello", "hey", "heyy", "yo", "hola", "namaste"
     ]
-
-    smalltalk = [
-        "how are you", "whats up", "what’s up", "wyd",
-        "doing good", "cool", "ok", "okay", "k", "gm", "gn"
-    ]
-
-    # Greeting only
-    if t in greetings:
+    if t in greeting_words:
         return "greeting"
 
-    # A small non-skin message
-    if any(phrase in t for phrase in smalltalk):
+    # VERY SPECIFIC small talk patterns
+    small_talk_phrases = [
+        "how are you",
+        "what's up",
+        "whats up",
+        "wyd",
+        "are you there",
+        "you there",
+        "gm",
+        "good morning",
+        "gn",
+        "good night",
+        "ok",
+        "okay",
+        "k",
+        "cool",
+        "nice"
+    ]
+
+    # Must match exactly or closely — NOT anywhere in the sentence
+    if any(t == phrase for phrase in small_talk_phrases):
         return "small_talk"
 
+    # Otherwise → meaningful skincare request
     return "meaningful"
 
 # ==========================================
