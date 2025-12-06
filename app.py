@@ -540,7 +540,7 @@ def call_openrouter_chat(messages, retries=1):
     }
 
     payload = {
-        "model": "openai/gpt-4o-mini-speed",
+        "model": "openai/gpt-4o-mini",
         "messages": messages,
         "max_tokens": 650,
         "temperature": 0.65,
