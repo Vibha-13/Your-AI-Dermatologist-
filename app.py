@@ -829,6 +829,7 @@ def render_chat():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
+
 def render_diary():
     render_back_to_home()
     st.markdown('<div class="page-container">', unsafe_allow_html=True)
