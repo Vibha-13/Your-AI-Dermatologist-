@@ -366,6 +366,31 @@ def detect_severe_keywords(text: str) -> bool:
     t = (text or "").lower()
     return any(word in t for word in severe)
 
+def detect_intent(text: str):
+    if not text:
+        return "empty"
+
+    t = text.lower().strip()
+
+    greetings = [
+        "hi", "hii", "hiii", "hello", "hey", "heyy", "helo",
+        "hlo", "yo", "hola", "namaste", "hie"
+    ]
+
+    smalltalk = [
+        "how are you", "whats up", "what’s up", "wyd",
+        "doing good", "cool", "ok", "okay", "k", "gm", "gn"
+    ]
+
+    # Greeting only
+    if t in greetings:
+        return "greeting"
+
+    # A small non-skin message
+    if any(phrase in t for phrase in smalltalk):
+        return "small_talk"
+
+    return "meaningful"
 
 # ==========================================
 # API CALLER — OpenRouter
@@ -567,6 +592,9 @@ def render_home():
 # ==========================================
 # SMART SKIN COACH (MAIN CHAT)
 # ==========================================
+# ==========================================
+# SMART SKIN COACH (MAIN CHAT)
+# ==========================================
 def render_chat():
     import json
 
@@ -628,7 +656,7 @@ def render_chat():
                 )
             })
 
-        # Show bubbles
+        # Show conversation bubbles
         for m in st.session_state.messages_beta:
             if m["role"] == "assistant":
                 st.markdown(
@@ -642,7 +670,7 @@ def render_chat():
                 )
 
         # ----------------------------------------
-        # SEND HANDLER — FIXES DOUBLE CLICK
+        # SEND HANDLER (prevents double click)
         # ----------------------------------------
         def handle_send_beta():
             txt = st.session_state.get("chat_input_beta", "").strip()
@@ -666,11 +694,28 @@ def render_chat():
             user_text = st.session_state.pending_beta
             st.session_state.pending_beta = ""
 
-            # Add user bubble
+            # Add user's message
             st.session_state.messages_beta.append({
                 "role": "user",
                 "text": user_text,
             })
+
+            # ------------- INTENT DETECTION (greetings & small talk) ------------
+            intent = detect_intent(user_text)
+
+            if intent == "greeting":
+                st.session_state.messages_beta.append({
+                    "role": "assistant",
+                    "text": "Hi! 💗 Tell me your main skin concern — acne, dryness, redness, pigmentation, anything."
+                })
+                return
+
+            if intent == "small_talk":
+                st.session_state.messages_beta.append({
+                    "role": "assistant",
+                    "text": "I’m here whenever you’re ready 💫 Tell me what’s bothering your skin."
+                })
+                return
 
             # Severe keyword check
             if detect_severe_keywords(user_text):
@@ -680,13 +725,13 @@ def render_chat():
                 )
                 st.session_state.messages_beta.append({"role": "assistant", "text": warn})
 
-            # Build messages for AI
+            # Build messages for API
             messages = [{
                 "role": "system",
                 "content": """
-You are Smart Skin Coach. 
-You reply ONLY in clean JSON like this:
+You are Smart Skin Coach.
 
+Respond ONLY in JSON with keys:
 {
  "summary": "",
  "am_routine": [],
@@ -695,16 +740,16 @@ You reply ONLY in clean JSON like this:
  "caution": ""
 }
 
-No markdown. No explanations. No extra text.
+NO markdown. NO bullet points outside JSON. NO explanations outside JSON.
                 """,
             }]
 
-            # Add last few turns
+            # Add last few turns for context
             for m in st.session_state.messages_beta[-6:]:
                 api_role = "assistant" if m["role"] == "assistant" else "user"
                 messages.append({"role": api_role, "content": m["text"]})
 
-            # API call
+            # Call API
             with st.spinner("Preparing your gentle routine…"):
                 reply_text, err = call_openrouter_chat(messages)
 
@@ -722,8 +767,9 @@ No markdown. No explanations. No extra text.
                     "role": "assistant",
                     "text": "Basic fallback routine generated.",
                 })
+
             else:
-                # Try to parse JSON
+                # JSON parse
                 try:
                     parsed = json.loads(reply_text)
                     st.session_state.last_plan_beta = parsed
@@ -732,7 +778,6 @@ No markdown. No explanations. No extra text.
                         "text": "Your personalised routine is ready ✔️",
                     })
                 except:
-                    # Raw fallback
                     st.session_state.last_plan_beta = {"raw": reply_text}
                     st.session_state.messages_beta.append({
                         "role": "assistant",
@@ -740,7 +785,7 @@ No markdown. No explanations. No extra text.
                     })
 
         # ----------------------------------------
-        # SHOW ROUTINE SECTION (Glass UI)
+        # SHOW ROUTINE (Glass UI)
         # ----------------------------------------
         plan = st.session_state.last_plan_beta
         if plan:
