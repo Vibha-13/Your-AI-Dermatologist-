@@ -422,6 +422,12 @@ User profile:
 - Skin type: {p.get('skin_type')}
 - Concern: {p.get('main_concern')}
 - Sensitivity: {p.get('sensitivity')}
+IMPORTANT:
+- ALWAYS respond in natural, conversational language.
+- NEVER return JSON.
+- NEVER return dictionaries, lists, arrays or structured objects.
+- ALWAYS write as friendly paragraphs or bullet points only.
+
 """
 
 def build_chat_messages():
