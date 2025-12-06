@@ -845,11 +845,21 @@ def render_chat():
             )
 
     # ---------- Send callback ----------
-    def handle_send_ai():
-        text = st.session_state.chat_input_ai.strip()
-        if text:
-            st.session_state.pending_user_input_ai = text
-            st.session_state.chat_input_ai = ""
+    def handle_send():
+    # Prevent repeated triggers
+    if st.session_state.get("send_guard", False):
+        return
+
+    st.session_state.send_guard = True
+
+    text = st.session_state.get("chat_input", "").strip()
+    if text:
+        st.session_state.pending_user_input = text
+        st.session_state.chat_input = ""
+
+    # Force rerender immediately
+    st.session_state.send_guard = False
+
 
     # Input box
     st.text_input("You:", key="chat_input_ai")
@@ -889,7 +899,7 @@ def render_chat():
             payload_messages.append({"role": "assistant", "content": warn})
 
         # API call
-        with st.spinner("Thinking about your skin…"):
+        
             reply, err = call_openrouter_chat(payload_messages)
 
         # Handle errors
@@ -1274,11 +1284,21 @@ def render_chat_v2():
             )
 
     # ---------- Input handler ----------
-    def handle_send_beta():
-        text = st.session_state.chat_input_beta.strip()
-        if text:
-            st.session_state.pending_user_input_beta = text
-            st.session_state.chat_input_beta = ""
+    def handle_send():
+    # Prevent repeated triggers
+    if st.session_state.get("send_guard", False):
+        return
+
+    st.session_state.send_guard = True
+
+    text = st.session_state.get("chat_input", "").strip()
+    if text:
+        st.session_state.pending_user_input = text
+        st.session_state.chat_input = ""
+
+    # Force rerender immediately
+    st.session_state.send_guard = False
+
 
     # Input box
     st.text_input("You:", key="chat_input_beta")
@@ -1318,7 +1338,7 @@ def render_chat_v2():
             payload_messages.append({"role": "assistant", "content": warn})
 
         # API call
-        with st.spinner("Thinking gently about your routine…"):
+        
             reply_text, err = call_openrouter_chat(payload_messages)
 
         if err:
