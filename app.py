@@ -612,17 +612,24 @@ def render_chat():
     st.markdown('<div class="page-container">', unsafe_allow_html=True)
     st.markdown("### 🧠 Smart Skin Coach (Beta)", unsafe_allow_html=True)
 
+    # ----------------------------------------
+    # CONSENT CHECK
+    # ----------------------------------------
     if not st.session_state.consent:
-        st.warning("Please confirm consent in the sidebar.")
+        st.warning("Please confirm in the sidebar that you understand SkinSync is not a doctor.")
         return
 
+    # Profile mini line
     prof = st.session_state.profile
     st.markdown(
-        f"<p style='font-size:12px;opacity:0.8;'>Profile: <strong>{prof['skin_type']}</strong> · {prof['main_concern']} · sensitivity: {prof['sensitivity']}</p>",
+        f"<p style='font-size:12px;opacity:0.8;'>Profile: <strong>{prof['skin_type']}</strong> skin · "
+        f"{prof['main_concern']} · sensitivity: {prof['sensitivity']}</p>",
         unsafe_allow_html=True,
     )
 
-    # ---------- STATE ----------
+    # ----------------------------------------
+    # SESSION STATE
+    # ----------------------------------------
     if "messages_beta" not in st.session_state:
         st.session_state.messages_beta = []
 
@@ -635,7 +642,9 @@ def render_chat():
     if "send_guard_beta" not in st.session_state:
         st.session_state.send_guard_beta = False
 
-    # ---------- INITIAL GREETING ----------
+    # ----------------------------------------
+    # FIRST GREETING
+    # ----------------------------------------
     if len(st.session_state.messages_beta) == 0:
         st.session_state.messages_beta.append({
             "role": "assistant",
@@ -645,7 +654,9 @@ def render_chat():
             )
         })
 
-    # ---------- SHOW CHAT ----------
+    # ----------------------------------------
+    # DISPLAY CHAT BUBBLES
+    # ----------------------------------------
     for m in st.session_state.messages_beta:
         if m["role"] == "assistant":
             st.markdown(
@@ -658,11 +669,14 @@ def render_chat():
                 unsafe_allow_html=True,
             )
 
-    # ---------- INPUT ----------
-    user_input = st.text_input("You:", key="chat_input_beta")
+    # ----------------------------------------
+    # USER INPUT
+    # ----------------------------------------
+    st.text_input("You:", key="chat_input_beta")
 
     def handle_send():
-        if st.session_state.send_guard_beta:  
+        # Prevent double click
+        if st.session_state.send_guard_beta:
             return
         st.session_state.send_guard_beta = True
 
@@ -671,11 +685,11 @@ def render_chat():
             st.session_state.send_guard_beta = False
             return
 
-        # Add user message
+        # Add user bubble
         st.session_state.messages_beta.append({"role": "user", "text": txt})
         st.session_state.chat_input_beta = ""
 
-        # Detect greeting
+        # ----- Intent Detection -----
         intent = detect_intent(txt)
 
         if intent == "greeting":
@@ -694,20 +708,20 @@ def render_chat():
             st.session_state.send_guard_beta = False
             return
 
-        # Severe keyword check
+        # ----- Severe Keyword Check -----
         if detect_severe_keywords(txt):
             st.session_state.messages_beta.append({
                 "role": "assistant",
-                "text": "I noticed severe symptoms like pus/bleeding/fever. Please see a dermatologist soon."
+                "text": "I noticed severe symptoms like bleeding, pus, or fever. Please see a dermatologist soon."
             })
 
-        # Build clean prompt
-        messages = [
-            {
-                "role": "system",
-                "content": """
-You are Smart Skin Coach. 
-Respond ONLY in JSON with keys:
+        # ----- SYSTEM PROMPT (Smart dynamic JSON) -----
+        system_prompt = """
+You are Smart Skin Coach.
+
+You respond ONLY in valid JSON, with ONLY the keys requested by the user.
+
+VALID KEYS:
 {
  "summary": "",
  "am_routine": [],
@@ -715,16 +729,23 @@ Respond ONLY in JSON with keys:
  "diy": [],
  "caution": ""
 }
-NO extra text.
-                """
-            },
-            {
-                "role": "user",
-                "content": txt
-            }
+
+RULES:
+1. If user asks ONLY for AM → output { "summary": "", "am_routine": [] }
+2. If user asks ONLY for PM → output { "summary": "", "pm_routine": [] }
+3. If user asks ONLY DIY → output { "summary": "", "diy": [] }
+4. If user asks for "routine" or multiple → output all keys.
+5. Always include a short summary.
+6. No markdown. No explanations. JSON ONLY.
+"""
+
+        # ----- Build AI message -----
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": txt}
         ]
 
-        # Call API
+        # ----- API CALL -----
         with st.spinner("Preparing your gentle routine…"):
             reply, err = call_openrouter_chat(messages)
 
@@ -733,51 +754,82 @@ NO extra text.
                 "summary": "Network issue — fallback routine.",
                 "am_routine": ["Gentle cleanser", "Moisturizer", "Sunscreen"],
                 "pm_routine": ["Cleanser", "Moisturizer"],
-                "diy": ["Patch test everything."],
-                "caution": "If symptoms worsen, see a dermatologist."
+                "diy": ["Patch test everything first"],
+                "caution": "See a dermatologist if severe."
             }
             st.session_state.last_plan_beta = fallback
             st.session_state.messages_beta.append({
-                "role": "assistant", "text": "Fallback routine generated."
+                "role": "assistant",
+                "text": "Basic fallback routine generated."
             })
+
         else:
             try:
                 parsed = json.loads(reply)
                 st.session_state.last_plan_beta = parsed
                 st.session_state.messages_beta.append({
-                    "role": "assistant", "text": "Your personalised routine is ready ✔️"
+                    "role": "assistant",
+                    "text": "Your personalised routine is ready ✔️"
                 })
             except:
                 st.session_state.last_plan_beta = {"raw_text": reply}
                 st.session_state.messages_beta.append({
-                    "role": "assistant", 
-                    "text": "I couldn't parse the routine, but here's my advice."
+                    "role": "assistant",
+                    "text": "I couldn't parse JSON, but here’s the advice."
                 })
 
         st.session_state.send_guard_beta = False
 
     st.button("Send", on_click=handle_send)
 
-    # ---------- SHOW ROUTINE ----------
+    # ----------------------------------------
+    # DISPLAY ROUTINE (Glass UI)
+    # ----------------------------------------
     plan = st.session_state.last_plan_beta
+
     if plan:
+
+        # Summary
         if "summary" in plan:
-            st.markdown(f"<div class='glass-box'><h4>💗 Summary</h4>{plan['summary']}</div>", unsafe_allow_html=True)
+            st.markdown(
+                f"<div class='glass-box'><h4>💗 Summary</h4>{plan['summary']}</div>",
+                unsafe_allow_html=True
+            )
 
+        # AM routine
         if "am_routine" in plan:
-            am = "".join([f"<li>{x}</li>" for x in plan["am_routine"]])
-            st.markdown(f"<div class='glass-box'><h4>🌞 AM Routine</h4><ul>{am}</ul></div>", unsafe_allow_html=True)
+            if plan["am_routine"]:
+                am_html = "".join([f"<li>{x}</li>" for x in plan["am_routine"]])
+                st.markdown(
+                    f"<div class='glass-box'><h4>🌞 AM Routine</h4><ul>{am_html}</ul></div>",
+                    unsafe_allow_html=True
+                )
 
+        # PM routine
         if "pm_routine" in plan:
-            pm = "".join([f"<li>{x}</li>" for x in plan["pm_routine"]])
-            st.markdown(f"<div class='glass-box'><h4>🌙 PM Routine</h4><ul>{pm}</ul></div>", unsafe_allow_html=True)
+            if plan["pm_routine"]:
+                pm_html = "".join([f"<li>{x}</li>" for x in plan["pm_routine"]])
+                st.markdown(
+                    f"<div class='glass-box'><h4>🌙 PM Routine</h4><ul>{pm_html}</ul></div>",
+                    unsafe_allow_html=True
+                )
 
+        # DIY
         if "diy" in plan:
-            diy = "".join([f"<li>{x}</li>" for x in plan["diy"]])
-            st.markdown(f"<div class='glass-box'><h4>🧴 DIY Care</h4><ul>{diy}</ul></div>", unsafe_allow_html=True)
+            if plan["diy"]:
+                diy_html = "".join([f"<li>{x}</li>" for x in plan["diy"]])
+                st.markdown(
+                    f"<div class='glass-box'><h4>🧴 DIY Care</h4><ul>{diy_html}</ul></div>",
+                    unsafe_allow_html=True
+                )
 
+        # Caution
         if "caution" in plan:
-            st.markdown(f"<div class='warn-box'>⚠️ {plan['caution']}</div>", unsafe_allow_html=True)
+            if plan["caution"]:
+                st.markdown(
+                    f"<div class='warn-box'>⚠️ {plan['caution']}</div>",
+                    unsafe_allow_html=True
+                )
 
 # ==========================================
 # 📷 IMAGE ANALYSIS PAGE
